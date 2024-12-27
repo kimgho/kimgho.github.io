@@ -1,12 +1,15 @@
 {
   "name": "glog2",
   "version": "0.1.0",
+  "homepage": "https://kimgho.github.io/glog",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "touch": "touch out/.nojekyll",
+    "deploy": "next build && type nul > out/.nojekyll && git add -f out/ && git commit -m \"Deploy\" && git subtree push --prefix out origin gh-pages"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
