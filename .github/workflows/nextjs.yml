@@ -50,10 +50,7 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
       - name: Build with Next.js
-        run: pnpm next build
-
-      - name: Static HTML export with Next.js
-        run: pnpm next export
+        run: pnpm build
 
       - name: Add noJekyll file
         run: touch ./out/.nojekyll
