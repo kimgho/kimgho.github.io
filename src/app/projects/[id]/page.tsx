@@ -7,14 +7,11 @@ export async function generateStaticParams() {
 }
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
+export default async function Page({ params }: PageProps) {
+  const { id } = await params;
 
-export default function Page({ params }: PageProps) {
-  const { id } = params;
-  //   const project = projects.find((project) => [project.id](http://project.id) === parseInt(id));
   const project = projects.find((project) => project.id === parseInt(id));
   if (!project) {
     return <div>프로젝트를 찾을 수 없습니다.</div>;
