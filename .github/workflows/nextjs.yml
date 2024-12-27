@@ -21,59 +21,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: pnpm
-          pnpm-version: "latest"  # This line installs pnpm
 
-      # Remove the manual Install pnpm step, since pnpm is installed above
-      # - name: Install pnpm
-      #   run: npm install -g pnpm
-
-      - name: Detect package manager
-        id: detect-package-manager
-        run: |
-          if [ -f "${{ github.workspace }}/pnpm-lock.yaml" ]; then
-            echo "manager=pnpm" >> $GITHUB_OUTPUT
-            echo "command=install" >> $GITHUB_OUTPUT
-            echo "runner=pnpm" >> $GITHUB_OUTPUT
-          elif [ -f "${{ github.workspace }}/yarn.lock" ]; then
-            echo "manager=yarn" >> $GITHUB_OUTPUT
-            echo "command=install" >> $GITHUB_OUTPUT
-            echo "runner=yarn" >> $GITHUB_OUTPUT
-          elif [ -f "${{ github.workspace }}/package.json" ]; then
-            echo "manager=npm" >> $GITHUB_OUTPUT
-            echo "command=install" >> $GITHUB_OUTPUT
-            echo "runner=npm" >> $GITHUB_OUTPUT
-          else
-            echo "Unable to determine package manager"
-            exit 1
-          fi
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8  # Specify the pnpm version you need
+          run_install: false
+          cache: true
 
       - name: Install Dependencies
-        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+        run: pnpm install
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
           static_site_generator: next
 
-      - name: Restore cache
+      - name: Restore Next.js cache
         uses: actions/cache@v4
         with:
-          path: |
-            .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml', '**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml', '**/package-lock.json', '**/yarn.lock') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: pnpm next build
 
       - name: Static HTML export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next export
+        run: pnpm next export
 
       - name: Add noJekyll file
         run: touch ./out/.nojekyll
