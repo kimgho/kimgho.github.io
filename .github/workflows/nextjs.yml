@@ -26,9 +26,11 @@ jobs:
         with:
           node-version: "20"
           cache: pnpm
+          pnpm-version: "latest"  # This line installs pnpm
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      # Remove the manual Install pnpm step, since pnpm is installed above
+      # - name: Install pnpm
+      #   run: npm install -g pnpm
 
       - name: Detect package manager
         id: detect-package-manager
