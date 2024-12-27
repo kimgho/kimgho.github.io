@@ -1,20 +1,11 @@
 import Container from "@/app/_components/Container";
-
-const skills = [
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Node.js",
-  "TailwindCSS",
-  "Git",
-];
+import { skills } from "@/app/_const/skill";
 
 export default function Skills() {
   return (
     <div>
       <Container>
-        <h3 className="text-xl font-semibold mb-4">Skills</h3>
+        <h3 className="text-xl font-semibold mb-2">Skills</h3>
         <div className="flex flex-wrap gap-2">
           {skills.map((skill) => (
             <span
