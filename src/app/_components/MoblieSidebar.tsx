@@ -17,14 +17,14 @@ export function MobileSidebar() {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="h-6 w-6" />
+          <Menu size={40} />
         </Button>
       </SheetTrigger>
       <SheetContent side="right">
         <SheetHeader>
           <SheetTitle>DEVKIM</SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-4 mt-4">
+        <nav className="flex flex-col gap-4 mt-16 ml-6">
           <LinkItem href="/posts" Nav="글" isMainNav={true} />
           <LinkItem href="/projects" Nav="프로젝트" isMainNav={true} />
           <LinkItem

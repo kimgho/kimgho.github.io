@@ -15,8 +15,7 @@ export default function LinkItem({ href, Nav, isMainNav }: NavProps) {
           : ""
       }`}
     >
-      <Link href={href} className="text-gray-800">
-        {" "}
+      <Link href={href}>
         {/** github의 경우 새창으로 열기? target="_blank" */}
         {Nav}
       </Link>
