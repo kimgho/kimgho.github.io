@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-export default function TitleBadge({ tag }: { tag: string }) {
+export default function TagBadge({ tag }: { tag: string }) {
   return (
     <Badge
       key={tag}

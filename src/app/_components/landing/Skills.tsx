@@ -1,4 +1,4 @@
-import TitleBadge from "@/app/_components/common/Badge";
+import TagBadge from "@/app/_components/common/TagBadge";
 import Container from "@/app/_components/landing/Container";
 import { skills } from "@/app/_const/skill";
 
@@ -9,7 +9,7 @@ export default function Skills() {
         <h3 className="text-xl font-semibold mb-2">Skills</h3>
         <div className="flex flex-wrap gap-2">
           {skills.map((skill) => (
-            <TitleBadge key={skill} tag={skill} />
+            <TagBadge key={skill} tag={skill} />
           ))}
         </div>
       </Container>

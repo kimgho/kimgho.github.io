@@ -1,3 +1,4 @@
+import TagBadge from "@/app/_components/common/TagBadge";
 import { getAllPosts } from "@/lib/mdx";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,21 +25,16 @@ export default async function PostsPage() {
                 />
               </div>
 
-              <div className="p-4">
+              <div className="p-4 ml-2">
                 <h2 className="font-bold text-xl mb-2">{post.title}</h2>
                 <p className="text-gray-600 text-sm mb-4">{post.description}</p>
 
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex flex-col items-start justify-between">
                   <span>{new Date(post.date).toLocaleDateString()}</span>
                   {post.tags && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-row flex-wrap gap-2 mt-2">
                       {post.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-gray-100 px-2 py-1 rounded"
-                        >
-                          {tag}
-                        </span>
+                        <TagBadge key={tag} tag={tag} />
                       ))}
                     </div>
                   )}

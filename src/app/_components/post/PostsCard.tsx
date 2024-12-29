@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import TitleBadge from "@/app/_components/common/Badge";
+import TagBadge from "@/app/_components/common/TagBadge";
 interface ProjectCardProps {
   slug: string;
   title: string;
@@ -52,7 +52,7 @@ export default function PostCard({
           {tags && tags.length > 0 && (
             <div className="flex flex-row flex-wrap gap-2 mt-2">
               {tags.map((tag) => (
-                <TitleBadge key={tag} tag={tag} />
+                <TagBadge key={tag} tag={tag} />
               ))}
             </div>
           )}
