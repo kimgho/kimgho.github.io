@@ -8,6 +8,7 @@ interface Frontmatter {
   title: string;
   date: string;
   description?: string;
+  writer: string;
   tags?: string[];
   thumbnail?: string;
   slug: string;
@@ -79,10 +80,10 @@ export async function getAllPosts(): Promise<Post[]> {
       const fileContent = fs.readFileSync(filePath, { encoding: "utf8" });
       const { data } = matter(fileContent);
 
-      // Post 인터페이스에 맞게 데이터 구성
       const post: Post = {
         slug,
         title: data.title,
+        writer: data.writer,
         date: data.date,
         description: data.description,
         tags: Array.isArray(data.tags) ? data.tags : undefined,
