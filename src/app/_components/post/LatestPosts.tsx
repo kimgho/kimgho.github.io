@@ -1,4 +1,4 @@
-import PostsCard from "@/app/_components/PostsCard";
+import PostsCard from "@/app/_components/post/PostsCard";
 import { getAllPosts } from "@/lib/mdx";
 
 export default async function LatestPosts() {
@@ -7,7 +7,7 @@ export default async function LatestPosts() {
   const latestPosts = allPosts.slice(0, 3);
 
   return (
-    <section className="container mx-auto px-4 py-16">
+    <section className="container mx-auto px-2 py-16">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-2 mb-8">
           <h2 className="text-3xl font-bold">{">_Latest Posts"}</h2>

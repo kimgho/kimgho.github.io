@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import LinkItem from "../_components/LinkItem";
-import { MobileSidebar } from "../_components/MoblieSidebar";
+import LinkItem from "../_components/layout/LinkItem";
+import { MobileSidebar } from "../_components/layout/MoblieSidebar";
 import { ModeToggle } from "@/components/ModeToggle";
 
 const Navbar = () => {

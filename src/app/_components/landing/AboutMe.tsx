@@ -1,9 +1,9 @@
-import Container from "@/app/_components/Container";
-import Skills from "@/app/_components/Skills";
+import Container from "@/app/_components/landing/Container";
+import Skills from "@/app/_components/landing/Skills";
 
 export default function AboutMe() {
   return (
-    <section className="container mx-auto px-4 py-16">
+    <section className="container mx-auto px-2 py-16">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-2 mb-8">
           <h2 className="text-3xl font-bold">{">_About Me"}</h2>

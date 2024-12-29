@@ -1,4 +1,4 @@
-import ProjectCard from "@/app/_components/ProjectCard";
+import ProjectCard from "@/app/_components/projects/ProjectCard";
 import { projects } from "@/app/projects/_mock/projects";
 
 export default function Page() {

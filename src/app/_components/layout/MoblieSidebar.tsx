@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import LinkItem from "./LinkItem";
+import LinkItem from "@/app/_components/layout/LinkItem";
 
 export function MobileSidebar() {
   return (

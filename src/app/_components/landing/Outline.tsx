@@ -1,6 +1,6 @@
 export default function Outline() {
   return (
-    <section className="container mx-auto px-4 py-16 text-center">
+    <section className="container mx-auto px-2 py-16 text-center">
       <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 py-6 ">
         Frontend Developer KIMGHO
       </h1>
