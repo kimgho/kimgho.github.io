@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import TitleBadge from "@/app/_components/common/Badge";
 interface ProjectCardProps {
   slug: string;
   title: string;
@@ -31,7 +32,7 @@ export default function PostCard({
           className="aspect-square group-hover:scale-105 transition-transform duration-300"
         />
       </div>
-      <div className="p-6 bg-slate-100 dark:bg-gray-900">
+      <div className="p-6 border-t dark:bg-gray-900">
         <h3 className="text-xl font-semibold mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400">
           {title}
         </h3>
@@ -51,12 +52,7 @@ export default function PostCard({
           {tags && tags.length > 0 && (
             <div className="flex flex-row flex-wrap gap-2 mt-2">
               {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                >
-                  {tag}
-                </span>
+                <TitleBadge key={tag} tag={tag} />
               ))}
             </div>
           )}
