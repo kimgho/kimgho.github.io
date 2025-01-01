@@ -2,6 +2,7 @@
 
 import TagBadge from "@/app/_components/common/TagBadge";
 import Category from "@/app/posts/_components/Category";
+import MobileCategory from "@/app/posts/_components/MobileCategory";
 import { Post } from "@/lib/mdx";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,7 +40,13 @@ export default function RenderPost({ posts }: { posts: Post[] }) {
         selectedTag={selectedTag}
         setSelectedTagAction={setSelectedTag}
       />
-
+      <div className="md:hidden mb-4">
+        <MobileCategory
+          categories={categories}
+          selectedTag={selectedTag}
+          setSelectedTagAction={setSelectedTag}
+        />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPosts.map((post) => (
           <Link href={`/posts/${post.slug}`} key={post.slug}>
