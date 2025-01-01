@@ -18,12 +18,11 @@ import {
 interface Frontmatter {
   title: string;
   date: string;
-  description?: string;
+  description: string;
   writer: string;
   tags: string[];
   thumbnail?: string;
   slug: string;
-  [key: string]: unknown;
 }
 
 export interface TOCHeading {
@@ -32,7 +31,7 @@ export interface TOCHeading {
   id: string;
 }
 
-interface Post extends Frontmatter {
+export interface Post extends Frontmatter {
   slug: string;
 }
 
