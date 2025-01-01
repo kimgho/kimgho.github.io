@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import LinkItem from "@/app/_components/layout/LinkItem";
+import { ModeToggle } from "@/components/ModeToggle";
 
 export function MobileSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +25,12 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>DEVKIM</SheetTitle>
+          <div className="flex flex-row items-center justify-around w-full">
+            <SheetTitle>DEVKIM</SheetTitle>
+            <div className="mb-2">
+              <ModeToggle />
+            </div>
+          </div>
         </SheetHeader>
         <nav className="flex flex-col gap-4 mt-16 ml-6">
           <LinkItem
