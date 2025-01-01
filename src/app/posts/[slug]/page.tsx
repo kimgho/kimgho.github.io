@@ -2,7 +2,7 @@ import TagBadge from "@/app/_components/common/TagBadge";
 import { getPost, getAllPosts } from "@/lib/mdx";
 import { Metadata } from "next";
 import TableOfContents from "@/app/_components/TableOfContents";
-import Giscus from "@/app/posts/Giscus";
+import Giscus from "@/app/posts/_components/Giscus";
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PostPage({ params }: Props) {
+export default async function PostDetailPage({ params }: Props) {
   const { slug } = await params;
   const { content, frontmatter, headings } = await getPost(slug);
 
