@@ -1,13 +1,6 @@
 "use client";
 
-import { Post } from "@/lib/mdx";
-import { Dispatch, SetStateAction } from "react";
-
-interface CategoryProps {
-  categories: { [key: string]: Post[] };
-  selectedTag: string | null;
-  setSelectedTagAction: Dispatch<SetStateAction<string | null>>;
-}
+import { CategoryProps } from "@/app/posts/types/type";
 
 export default function Category({
   categories,
@@ -15,7 +8,7 @@ export default function Category({
   setSelectedTagAction,
 }: CategoryProps) {
   return (
-    <div className="mb-12">
+    <div className="mb-12 hidden md:flex md:flex-col md:text-xl">
       <h2 className="text-2xl font-bold mb-4">태그</h2>
       <div className="flex flex-wrap gap-3">
         {Object.entries(categories).map(([tag, posts]) => (
