@@ -20,7 +20,7 @@ export default function Giscus() {
     scriptElem.setAttribute("data-repo", "kimgho/kimgho.github.io");
     scriptElem.setAttribute("data-repo-id", "R_kgDONi0HJQ");
     scriptElem.setAttribute("data-category", "Comments");
-    scriptElem.setAttribute("data-category-id", "Comments");
+    scriptElem.setAttribute("data-category-id", "DIC_kwDONi0HJc4ClpsM");
     scriptElem.setAttribute("data-mapping", "pathname");
     scriptElem.setAttribute("data-strict", "0");
     scriptElem.setAttribute("data-reactions-enabled", "1");
