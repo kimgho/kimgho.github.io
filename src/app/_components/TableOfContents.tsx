@@ -16,22 +16,18 @@ export default function TableOfContents({ headings }: TOCProps) {
         element: document.getElementById(heading.id),
       }));
 
-      // 현재 스크롤 위치에서 가장 가까운 헤딩 찾기
-      const scrollPosition = window.scrollY + 100; // 약간의 오프셋 추가
+      const scrollPosition = window.scrollY + 100;
 
       let currentSection = headingElements[0]?.id;
 
       for (const { id, element } of headingElements) {
         if (!element) continue;
 
-        // 각 섹션의 시작 위치 계산
         const sectionTop = element.offsetTop;
 
-        // 현재 스크롤 위치가 섹션 시작점보다 크거나 같으면 해당 섹션이 현재 섹션
         if (scrollPosition >= sectionTop) {
           currentSection = id;
         } else {
-          // 이미 현재 섹션을 찾았으므로 중단
           break;
         }
       }
@@ -40,7 +36,7 @@ export default function TableOfContents({ headings }: TOCProps) {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // 초기 로드 시 실행
+    handleScroll();
 
     return () => {
       window.addEventListener("scroll", handleScroll);
@@ -71,7 +67,7 @@ export default function TableOfContents({ headings }: TOCProps) {
                 className={`text-base hover:text-primary transition-colors duration-200
                   ${
                     activeId === heading.id
-                      ? "text-primary font-medium"
+                      ? "text-primary font-bold"
                       : "text-muted-foreground"
                   }`}
               >
