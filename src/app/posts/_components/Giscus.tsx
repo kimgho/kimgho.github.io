@@ -19,7 +19,7 @@ export default function Giscus() {
 
     scriptElem.setAttribute("data-repo", "kimgho/kimgho.github.io");
     scriptElem.setAttribute("data-repo-id", "R_kgDONi0HJQ");
-    scriptElem.setAttribute("data-category", "Comments");
+    scriptElem.setAttribute("data-category", "Comment");
     scriptElem.setAttribute("data-category-id", "DIC_kwDONi0HJc4ClpsM");
     scriptElem.setAttribute("data-mapping", "pathname");
     scriptElem.setAttribute("data-strict", "0");
@@ -27,6 +27,7 @@ export default function Giscus() {
     scriptElem.setAttribute("data-emit-metadata", "0");
     scriptElem.setAttribute("data-input-position", "bottom");
     scriptElem.setAttribute("data-theme", theme);
+    scriptElem.setAttribute("crossorigin", "anonymous");
     scriptElem.setAttribute("data-lang", "ko");
 
     ref.current.appendChild(scriptElem);
