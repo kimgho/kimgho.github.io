@@ -25,11 +25,21 @@ export default function PostCard({
     >
       <div className="relative h-48 w-full overflow-hidden">
         <Image
-          src={thumbnail || "/test.webp"}
-          priority={false}
+          src={thumbnail || "/test.avif"}
           alt={title}
           fill
-          className="aspect-square group-hover:scale-105 transition-transform duration-300"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          priority={true}
+          quality={85}
+          loading="eager"
+          placeholder="blur"
+          blurDataURL="/test.avif"
+          onError={() => {
+            console.error("Image load failed");
+          }}
+          style={{
+            objectFit: "cover",
+          }}
         />
       </div>
       <div className="p-6 border-t dark:bg-gray-900">

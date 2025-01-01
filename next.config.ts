@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   basePath: isProduction ? "/glog" : "",
   images: {
     unoptimized: true,
+    formats: ["image/avif", "image/webp"],
   },
 };
 // const withBundleAnalyzer = bundleAnalyzer({

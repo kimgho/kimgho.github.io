@@ -53,10 +53,21 @@ export default function RenderPost({ posts }: { posts: Post[] }) {
             <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative h-48">
                 <Image
-                  src={post.thumbnail || "/test.webp"}
+                  src={post.thumbnail || "/test.avif"}
                   alt={post.title}
                   fill
-                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  priority={true}
+                  quality={85}
+                  loading="eager"
+                  placeholder="blur"
+                  blurDataURL="/test.avif"
+                  onError={() => {
+                    console.error("Image load failed");
+                  }}
+                  style={{
+                    objectFit: "cover",
+                  }}
                 />
               </div>
 
