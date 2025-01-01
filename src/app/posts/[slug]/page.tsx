@@ -2,6 +2,7 @@ import TagBadge from "@/app/_components/common/TagBadge";
 import { getPost, getAllPosts } from "@/lib/mdx";
 import { Metadata } from "next";
 import TableOfContents from "@/app/_components/TableOfContents";
+import Giscus from "@/app/posts/Giscus";
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -49,6 +50,7 @@ export default async function PostPage({ params }: Props) {
         <div className="mt-8">
           <div className="markdown space-y-6">{content}</div>
         </div>
+        <Giscus />
       </article>
       <TableOfContents headings={headings} />
     </div>
