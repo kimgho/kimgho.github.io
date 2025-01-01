@@ -34,9 +34,6 @@ export default function PostCard({
           loading="eager"
           placeholder="blur"
           blurDataURL="/test.avif"
-          onError={() => {
-            console.error("Image load failed");
-          }}
           style={{
             objectFit: "cover",
           }}

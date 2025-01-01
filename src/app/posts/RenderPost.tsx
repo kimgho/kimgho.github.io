@@ -62,9 +62,6 @@ export default function RenderPost({ posts }: { posts: Post[] }) {
                   loading="eager"
                   placeholder="blur"
                   blurDataURL="/test.avif"
-                  onError={() => {
-                    console.error("Image load failed");
-                  }}
                   style={{
                     objectFit: "cover",
                   }}
