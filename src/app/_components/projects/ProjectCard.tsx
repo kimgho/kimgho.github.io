@@ -16,7 +16,7 @@ export default function ProjectCard({
     <Link href={`/projects/${index}`}>
       <div
         key={index}
-        className="bg-white border border-gray-500 dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 hover:duration-200 cursor-pointer"
+        className="bg-white border border-gray-500 dark:bg-gray-800 rounded-lg overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-1 hover:duration-200 cursor-pointer"
       >
         <div className="aspect-video bg-gray-700 dark:bg-gray-700" />
         <div className="p-6">
