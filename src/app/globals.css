@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
 
@@ -64,7 +64,7 @@
 
 @layer utilities {
   body {
-    font-family: Arial, Helvetica, sans-serif, 'Pretendard-Regular';
+    font-family: Arial, Helvetica, sans-serif, "Pretendard-Regular";
   }
 }
 
@@ -125,9 +125,9 @@
 }
 @layer utilities {
   @font-face {
-    font-family: 'Pretendard-Regular';
-    src: url('https://fastly.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff')
-      format('woff');
+    font-family: "Pretendard-Regular";
+    src: url("https://fastly.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff")
+      format("woff");
     font-weight: 400;
     font-style: normal;
   }
@@ -166,7 +166,7 @@
   }
 
   p {
-    margin-bottom: 1.5em;
+    margin-bottom: 1em;
   }
 
   pre {
@@ -210,8 +210,9 @@
 
   ul,
   ol {
-    padding-left: 1.5rem;
-    margin: 1.5rem 0;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    /* margin: 1rem; */
   }
 
   li {
