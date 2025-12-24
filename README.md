@@ -1,37 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kimgho's Blog
 
-## Getting Started
+개인 기술 블로그입니다.
 
-First, run the development server:
+## 🛠 Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Framework & Language
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Next.js 16** - App Router
+- **React 19** - UI 라이브러리
+- **TypeScript 5+** - 정적 타입 언어
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Styling
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Tailwind CSS 4** - 유틸리티 퍼스트 CSS
+- **@tailwindcss/typography** - 마크다운 스타일링
 
-## Learn More
+### Content (MDX - 예정)
 
-To learn more about Next.js, take a look at the following resources:
+- **next-mdx-remote** - MDX 서버사이드 렌더링
+- **gray-matter** - 프론트매터 파싱
+- **rehype-pretty-code** + **Shiki** - 코드 블록 신택스 하이라이팅
+- **rehype-slug** - 헤딩 자동 ID 생성
+- **rehype-autolink-headings** - 헤딩 앵커 링크
+- **remark-gfm** - GitHub Flavored Markdown 지원
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### UI Components
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Lucide React** - 아이콘 라이브러리
 
-## Deploy on Vercel
+### Development & Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# kimgho.github.io
+- **Storybook 10** - UI 컴포넌트 개발 환경
+- **ESLint** - 코드 린팅
+- **Prettier** - 코드 포맷팅
