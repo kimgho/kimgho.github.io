@@ -1,5 +1,3 @@
-// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import storybook from "eslint-plugin-storybook";
 import tseslint from "typescript-eslint";
 import next from "@next/eslint-plugin-next";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -30,17 +28,7 @@ const eslintConfig = [
       "jsx-a11y/alt-text": "error",
     },
   },
-  {
-    files: [".storybook/**"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: null,
-      },
-    },
-  },
-  globalIgnores(["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", ".pnp.cjs", ".pnp.loader.mjs", ".yarn/**"]),
-  ...storybook.configs["flat/recommended"],
+  globalIgnores(["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ];
 
 export default eslintConfig;
