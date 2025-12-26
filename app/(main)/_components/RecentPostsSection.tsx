@@ -1,3 +1,4 @@
+"use client";
 import { PostData } from "@/app/utils/posts";
 
 import { PostCard } from "@/app/(main)/_components/PostCard";
