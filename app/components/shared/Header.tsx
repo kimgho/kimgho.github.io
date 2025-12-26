@@ -6,11 +6,11 @@ import Link from "next/link";
 
 import { Menu } from "lucide-react";
 
-import { MobileSidebar } from "@/app/components/shared/MobileSidebar";
+import { MobileSidebar } from "@/app/components/shared";
 
 import { NAV_LINKS } from "@/app/constants/nav";
 
-export default function Header() {
+export const Header = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -50,4 +50,4 @@ export default function Header() {
       <MobileSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </>
   );
-}
+};
