@@ -4,6 +4,8 @@ import { useId, useRef, useEffect } from "react";
 
 import { Search } from "lucide-react";
 
+import { GAPostEvents } from "@/app/utils/analytics";
+
 import { useDebounce } from "@/app/posts/hooks/useDebounce";
 
 interface PostSearchProps {
@@ -17,6 +19,7 @@ export const PostSearch = ({ search, onSearchChange }: PostSearchProps) => {
 
   const debouncedSearchChange = useDebounce((value: string) => {
     onSearchChange(value);
+    GAPostEvents.search(value);
   }, 300);
 
   useEffect(() => {

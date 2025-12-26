@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Tag } from "@/app/components/ui/Tag";
 
+import { GAPostEvents } from "@/app/utils/analytics";
 import { PostData } from "@/app/utils/posts";
 
 interface Props {
@@ -12,7 +13,11 @@ interface Props {
 export const PostCard = ({ post }: Props) => {
   return (
     <article className="group flex flex-col md:flex-row gap-6 p-5 rounded-xl bg-white border border-slate-200 hover:border-black/30 transition-all cursor-pointer">
-      <Link href={`/posts/${post.slug}`} className="flex flex-col md:flex-row gap-6 w-full">
+      <Link
+        href={`/posts/${post.slug}`}
+        onClick={() => GAPostEvents.clickPost(post.slug, post.title)}
+        className="flex flex-col md:flex-row gap-6 w-full"
+      >
         <figure className="w-full md:w-48 aspect-video md:aspect-square shrink-0 rounded-lg bg-slate-100 overflow-hidden">
           {post.thumbnail && (
             <Image

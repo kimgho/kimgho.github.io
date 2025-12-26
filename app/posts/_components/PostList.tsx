@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
+import { GAPostEvents } from "@/app/utils/analytics";
 import { PostData } from "@/app/utils/posts";
 
 import { PostCard } from "@/app/(main)/_components/PostCard";
@@ -23,6 +24,7 @@ export const PostList = ({ posts, categories }: Props) => {
   const [search, setSearch] = useState("");
 
   const handleCategoryChange = (tag: string) => {
+    GAPostEvents.selectCategory(tag);
     const params = new URLSearchParams(searchParams.toString());
     if (tag === "All") {
       params.delete("tag");
