@@ -27,11 +27,20 @@ export const metadata: Metadata = {
     siteName: "프론트엔드를 꿈꾸는 김건호의 블로그",
     locale: "ko_KR",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "김건호 블로그",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "프론트엔드를 꿈꾸는 김건호의 블로그",
     description: "프론트엔드를 꿈꾸는 김건호의 블로그",
+    images: ["/og-image.png"],
   },
 };
 
