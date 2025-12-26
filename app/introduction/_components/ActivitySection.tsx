@@ -1,5 +1,5 @@
-import { ResumeCard } from "@/app/resume/_components";
-import { ACTIVITIES } from "@/app/resume/_constants";
+import { ResumeCard } from "@/app/introduction/_components";
+import { ACTIVITIES } from "@/app/introduction/_constants";
 
 export const ActivitySection = () => {
   return (

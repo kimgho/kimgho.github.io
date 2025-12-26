@@ -5,17 +5,17 @@ import {
   EducationSection,
   AwardSection,
   IntroduceSection,
-} from "@/app/resume/_components";
+} from "@/app/introduction/_components";
 
 export const metadata: Metadata = {
   title: "김건호 - 자기소개",
   description: "김건호의 자기소개 페이지입니다.",
-  keywords: ["김건호", "자기 소개", "Resume"],
+  keywords: ["김건호", "자기 소개", "Introduction"],
   openGraph: {
     title: "김건호 - 자기소개",
     description: "김건호의 자기소개 페이지입니다.",
     type: "website",
-    url: "https://kimgho.github.io/resume",
+    url: "https://kimgho.github.io/introduction",
     siteName: "김건호 - 자기소개",
     images: [
       {

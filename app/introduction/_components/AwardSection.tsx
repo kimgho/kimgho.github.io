@@ -1,5 +1,5 @@
-import { ResumeCard } from "@/app/resume/_components";
-import { AWARDS, PUBLICATIONS } from "@/app/resume/_constants";
+import { ResumeCard } from "@/app/introduction/_components";
+import { AWARDS, PUBLICATIONS } from "@/app/introduction/_constants";
 
 export const AwardSection = () => {
   return (

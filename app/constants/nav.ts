@@ -5,9 +5,9 @@ export const NAV_LINKS = [
     title: "블로그 메인페이지",
   },
   {
-    name: "Resume",
-    href: "/resume",
-    title: "자기소개서",
+    name: "introduction",
+    href: "/introduction",
+    title: "자기소개",
   },
   {
     name: "posts",
