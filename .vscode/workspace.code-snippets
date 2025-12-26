@@ -1,0 +1,17 @@
+{
+    "MDX Frontmatter": {
+        "prefix": ["!mdx"],
+        "body": [
+            "---",
+            "title: \"${1:제목}\"",
+            "date: \"${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}\"",
+            "description: \"${2:설명}\"",
+            "tag: [\"${3:태그}\"]",
+            "thumbnail: \"/images/${4:thumbnail.png}\"",
+            "---",
+            "",
+            "${0}"
+        ],
+        "description": ""
+    }
+}
