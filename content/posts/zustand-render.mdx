@@ -1,0 +1,464 @@
+---
+title: "zustand 리렌더링 최소화하기"
+date: "2025-12-09"
+description: "과제를 하며 저질렀던 실수를 지금이라도 돌아보는 공부시간"
+tag: ["React", "zustand"]
+thumbnail: "/images/zustand.png"
+---
+
+이전에 과제를 진행하며 zustand로 상태 관리를 했습니다.
+이후 과제를 리뷰하는 과정에서 상태를 가져오는 방식을 아무렇게나 사용하고 있었고, 이것이 리렌더링 문제로 발생할 수 있다는 것을 깨달았습니다.
+
+zustand에서 상태를 가져올 때는 구조 분해 할당 방식과 selector를 통해 일부 상태만 구독하는 방식이 있습니다.
+두 가지 방식 모두 상태를 가져오지만 값이 변경되었을 때 리렌더링은 서로 다르게 동작합니다.
+
+다시는 이런 실수를 하지 않기 위해 왜 이렇게 동작하는지 알아보려고 합니다.
+
+# TL;DR
+
+## 구조 분해 할당 방식
+
+```ts
+const { bears, increasePopulation } = useBearStore();
+```
+
+전체 store 객체를 구독
+어떤 상태가 변경되어도 새 객체 참조값 생성 -> 항상 리렌더링 발생
+
+## Selector 방식
+
+```ts
+const bears = useBearStore((state) => state.bears);
+```
+
+특정 상태만 구독
+해당 값이 실제로 변경될 때만 리렌더링
+
+## 동작 원리
+
+상태 관리: vanilla.ts에서 클로저로 state를 관리하고, Object.assign으로 불변성 유지
+구독 시스템: Set으로 리스너 관리 (중복 방지 + O(1) 삭제)
+React 연동: useSyncExternalStore가 Selector 결과를 Object.is로 비교해 리렌더링 결정
+
+# Store 만들기
+
+zustand에서 store를 만드는 방식은 매우 간단합니다.
+
+```ts
+import { create } from "zustand";
+
+const useBearStore = create((set) => ({
+  // 값(상태)
+  bears: 0,
+
+  // 액션(상태 변경)
+  increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
+  removeAllBears: () => set({ bears: 0 }),
+  updateBears: (newBears) => set({ bears: newBears }),
+}));
+```
+
+- `create`를 통해 스토어를 생성합니다.
+  - store에서 관리할 값(상태)를 만들어 줍니다.
+  - 상태를 변경할 액션 함수를 정의합니다.
+
+이렇게 만든 store를
+
+```ts
+import { useBearStore } from './useBearStore';
+
+function Counter() {
+  const { bears, increasePopulation, removeAllBears } = useBearStore();
+
+  return (
+    <div>
+      <p>곰 {bears} 마리</p>
+      <button onClick={increasePopulation}>+1</button>
+      <button onClick={removeAllBears}>초기화하기</button>
+    </div>
+  )
+}
+```
+
+사용하는 컴포넌트에서 불러올 수 있습니다.
+
+- 이때 불러오는 방식은
+  - `const { bears, increasePopulation, removeAllBears } = useBearStore();`
+  - `const bears = useBearStore(state=>state.bears);`
+
+  구조분해 할당과 selector방식으로 가져올 수 있습니다.
+
+하지만 구조 분해 할당으로 값을 가져오면 어떤 상태가 변경되어도 리렌더링되는데, selector를 사용하면 구독하는 상태만 변경될 때 리렌더링됩니다.
+
+왜 이렇게 동작하는지 알려면 zustand 내부를 까봐야 합니다.
+
+# Zustand 내부 구경하기
+
+우선 zustand에서 확인해야할 핵심 코드는 `src/vanilla.ts`와 `src/react.ts`입니다.
+
+## vanilla.ts - createStore
+
+```ts
+// src/vanilla.ts
+const createStoreImpl: CreateStoreImpl = (createState) => {
+  type TState = ReturnType<typeof createState>;
+  type Listener = (state: TState, prevState: TState) => void;
+  let state: TState;
+  const listeners: Set<Listener> = new Set();
+
+  const setState: StoreApi<TState>["setState"] = (partial, replace) => {
+    // 새로운 상태 계산
+    const nextState =
+      typeof partial === "function" ? (partial as (state: TState) => TState)(state) : partial;
+
+    // Object.is로 상태 비교
+    if (!Object.is(nextState, state)) {
+      const previousState = state;
+      // 상태 업데이트
+      state =
+        (replace ?? (typeof nextState !== "object" || nextState === null))
+          ? (nextState as TState)
+          : Object.assign({}, state, nextState);
+      // 구독자들에게 상태 변경을 전파
+      listeners.forEach((listener) => listener(state, previousState));
+    }
+  };
+
+  const getState: StoreApi<TState>["getState"] = () => state;
+
+  const getInitialState: StoreApi<TState>["getInitialState"] = () => initialState;
+
+  const subscribe: StoreApi<TState>["subscribe"] = (listener) => {
+    listeners.add(listener);
+    // 구독 해제
+    return () => listeners.delete(listener);
+  };
+
+  const api = { setState, getState, getInitialState, subscribe };
+  const initialState = (state = createState(setState, getState, api));
+  return api as any;
+};
+```
+
+### state와 closure
+
+zustand는 상태를 함수 내부의 `let state`로 선언합니다.
+함수가 실행되고 api 객체가 반환된 후에도, api 내부의 메서드들은 클로저 덕분에 이 `state`에 계속 접근할 수 있습니다.
+외부에서는 state 변수에 직접 접근할 수 없고, 오직 api를 통해서만 상태를 조회하거나 변경할 수 있어 안전합니다.
+
+### Listeners
+
+상태가 변경될 때 알림을 보낼 구독자 목록을 관리하기 위해 배열이 아닌 Set을 사용했습니다.
+Set을 통해 아래와 같은 이점을 가질 수 있습니다.
+
+- 중복 방지: 동일한 리스너가 여러 번 등록되는 것을 자동으로 막아줍니다.
+- 삭제 효율성: 구독 해제시 배열은 filter나 splice를 사용해 O(N)의 비용이 들지만, Set의 delete 메서드는 O(1)입니다.
+
+### setState와 불변성
+
+`Object.assign({}, state, nextState)`를 사용해 빈 객체에 기존 상태와 새로운 상태를 합칩니다.
+이렇게 하면 내용물이 같더라도 객체의 참조값(메모리 주소)이 완전히 새로운 객체가 탄생합니다.
+React는 객체의 참조값이 바뀌어야 변경을 감지하고 리렌더링을 하기 때문에, 이 부분은 React와의 연동을 위해 필수적인 로직입니다.
+
+### Object.is
+
+무조건 상태를 업데이트하고 구독자에게 알리는 것이 아닙니다. `Object.is`를 사용하여 "정말 값이 변했는지" 먼저 확인합니다.
+nextState와 현재 state가 같다면, 아무런 동작도 하지 않습니다
+이를 통해 불필요한 연산과 리렌더링 전파를 방지하는 최적화가 내부적으로 되어 있음을 알 수 있습니다.
+
+## react.ts - useStore
+
+```ts
+// src/react.ts
+export function useStore<TState, StateSlice>(
+  api: ReadonlyStoreApi<TState>,
+  selector: (state: TState) => StateSlice = identity as any,
+) {
+  const slice = React.useSyncExternalStore(
+    api.subscribe,
+    // Snapshot
+    React.useCallback(() => selector(api.getState()), [api, selector]),
+    // SSR용 Snapshot
+    React.useCallback(() => selector(api.getInitialState()), [api, selector]),
+  );
+  React.useDebugValue(slice);
+  return slice;
+}
+```
+
+### useSyncExternalStore
+
+useSyncExternalStore는 외부 store를 구독할 수 있는 React Hook입니다.
+
+```ts
+const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?)
+```
+
+store에 있는 데이터의 스냅샷을 반환합니다. 두 개의 함수를 인수로 전달해야 합니다.
+
+subscribe 함수는 store를 구독하고 구독을 취소하는 함수를 반환해야 합니다.
+getSnapshot 함수는 store에서 데이터의 스냅샷을 읽어야 합니다.
+
+**이때 Snapshot이 이전과 다르다면 리스너(구독자)에게 리렌더링하도록 알립니다.**
+
+자세한 내용은 [공식문서](https://ko.react.dev/reference/react/useSyncExternalStore)를 통해 볼 수 있습니다.
+
+### api.subscribe
+
+`useSyncExternalStore`의 첫 번째 인자는 구독 함수입니다.
+`vanilla.ts`에서 만들었던 `api.subscribe`를 그대로 전달합니다. Store 내부의 상태가 변경되어 listeners가 호출될 때, React에게 "상태가 변했으니 다시 그려야 해"라고 알리는 역할을 합니다.
+
+### getSnapshot과 Selector
+
+두 번째는 현재 스토어의 데이터를 가져오는 `getSnapshot`함수입니다.
+
+```ts
+React.useCallback(() => selector(api.getState()), [api, selector]);
+```
+
+React는 렌더링이 필요할 때마다 이 함수를 실행해서 현재 값을 가져오는getSnapshot 함수입니다.
+그리고 이전 값과 현재 값을 `Object.is`로 비교하여 리렌더링 여부를 결정합니다.
+여기서 중요한 점은 `api.getState()(전체 상태)`를 바로 넘기는 것이 아니라, `selector를 거친 반환값`을 React에게 넘겨준다는 점입니다.
+
+### identity
+
+```ts
+const identity = <T>(arg: T): T => arg;
+export function useStore<S extends ReadonlyStoreApi<unknown>>(api: S): ExtractState<S>;
+
+export function useStore<S extends ReadonlyStoreApi<unknown>, U>(
+  api: S,
+  selector: (state: ExtractState<S>) => U,
+): U;
+```
+
+만약 사용자가 `useStore()`처럼 selector를 전달하지 않는다면 `identity`함수를 통해 받은 값을 그대로 반환합니다.
+
+즉, selector가 없으면 `getSnapshot`의 결과는 **Store의 전체 state 객체**가 됩니다
+앞서 vanilla.ts에서 봤듯이 state 객체는 업데이트될 때마다 `Object.assign`에 의해 **새로운 참조값(새 객체)**을 가집니다.
+**따라서 React는 내용이 변했든 안 변했든 "참조값이 다르니 변경되었다"고 판단해 리렌더링을 일으킵니다.**
+
+### useBoundStore
+
+```ts
+export type UseBoundStore<S extends ReadonlyStoreApi<unknown>> = {
+  (): ExtractState<S>;
+  <U>(selector: (state: ExtractState<S>) => U): U;
+} & S;
+
+const createImpl = <T>(createState: StateCreator<T, [], []>) => {
+  const api = createStore(createState);
+
+  const useBoundStore: any = (selector?: any) => useStore(api, selector);
+
+  Object.assign(useBoundStore, api);
+
+  return useBoundStore;
+};
+
+export const create = (<T>(createState: StateCreator<T, [], []> | undefined) =>
+  createState ? createImpl(createState) : createImpl) as Create;
+```
+
+`useBoundStore`는 컴포넌트에서 사용하게 될 커스텀 훅으로, selector를 선택적으로 받을 수 있으며, `useStore`를 호출하며 상태 값을 반환합니다.
+
+# 그럼 어떻게 동작할까?
+
+이제 store를 가져올 때 아래 2가지 방법 중 하나를 사용합니다.
+
+- `const { bears, increasePopulation, removeAllBears } = useBearStore();`
+- `const bears = useBearStore(state=>state.bears);`
+
+## 구조 분해 할당
+
+```ts
+const { bears, increasePopulation, removeAllBears } = useBearStore();
+```
+
+구조 분해 할당의 경우 selector를 전달하지 않습니다.
+따라서 기본적으로 selector의 매개변수는 `state=>state` 기본 함수가 전달됩니다.
+이때 `slice`는 store의 전체가 전달됩니다.
+
+### 구조 분해 할당에서의 리렌더링
+
+```ts
+const ComponentA = () => {
+  const { increasePopulation } = useBearStore();
+};
+const ComponentB = () => {
+  const { bears } = useBearStore();
+};
+```
+
+2개의 컴포넌트가 있을 때 구조 분해 할당을 하게 되면 bears가 변경됐을 때 이상적이라면 `ComponentA`는 리렌더링이 되지 않아야 합니다.
+
+하지만 Selector를 전달하지 않았기 때문에 store 전체가 전달됩니다.
+이렇게 되면 bears가 변경되면 Object.assign을 통해 새로운 객체가 생성이 됩니다.
+
+새로운 객체는 이전 객체와 다른 메모리 주소를 가지기 때문에 Object.is로 비교하면 항상 다르다고 판단합니다.
+
+따라서 리렌더링이 발생하게 됩니다.
+
+## Selector
+
+```ts
+const bears = useBearStore((state) => state.bears);
+
+const selector = (state) => state.bears;
+```
+
+Selector를 전달하기 때문에 `state=>state.bears`가 전달됩니다.
+이때 `slice`에는 selector가 반환하는 **bears만** 전달됩니다.
+
+### Selector에서의 리렌더링
+
+```ts
+const ComponentA = () => {
+  const increasePopulation = useBearStore((state) => state.increasePopulation);
+};
+
+const ComponentB = () => {
+  const bears = useBearStore((state) => state.bears);
+};
+```
+
+마찬가지로 2개의 컴포넌트가 있고, bears가 변경되었습니다.
+하지만 이번에는 Selector에 `bears`가 전달되었습니다.
+
+- ComponentA의 경우 (리렌더링 X)
+- Snapshot 비교: increasePopulation 함수(이전) vs increasePopulation 함수(현재)
+- Object.is 결과: true (함수는 변하지 않았으므로)
+
+A 결과: 상태 객체(state) 자체는 바뀌었지만, Selector가 뽑아낸 값은 같으므로 리렌더링되지 않습니다.
+
+- ComponentB의 경우 (리렌더링 O)
+- Snapshot 비교: 0 (이전) vs 1 (현재)
+- Object.is 결과: false
+
+B 결과: 값이 실제로 변했으므로 리렌더링이 발생합니다.
+
+## useShallow
+
+Selector를 쓰면 불필요한 리렌더링을 막을 수 있다는 것을 알았습니다. 그런데 만약 여러 개의 상태를 한꺼번에 가져오고 싶다면 어떻게 해야 할까요?
+
+```ts
+const { bears, fish } = useBearStore((state) => ({
+  bears: state.bears,
+  fish: state.fish,
+}));
+```
+
+이렇게 떠올랐습니다.
+selector를 통해 bears와 fish만 가져오는 것 같습니다.
+하지만 Selector 함수 `(state)=>({...})`는 실행될 때마다 새로운 객체 리터럴을 생성합니다.
+
+- Snapshot: `{ bears: 0, fish: 0 }` (새로운 참조값 A)
+- 변경 발생: 다른 상태가 변해서 getSnapshot이 다시 실행됨.
+- New Snapshot: `{ bears: 0, fish: 0 }` (새로운 참조값 B)
+- 비교: 내용물은 같지만 참조값이 다르므로 Object.is(A, B)는 false입니다.
+- 결과: 값이 변하지 않았는데도 리렌더링이 발생합니다.
+
+이 문제를 해결하기 위해 zustand는 `useShallow`를 제공합니다.
+
+```ts
+import { useShallow } from "zustand/react/shallow";
+
+const { bears, fish } = useBearStore(
+  useShallow((state) => ({
+    bears: state.bears,
+    fish: state.fish,
+  })),
+);
+```
+
+`useShallow`는 Selector가 반환하는 객체의 참조값이 아니라, 객체 내부의 값들을 얕은 비교하도록 만듭니다.
+
+이제 동작 방식이 바뀝니다.
+
+- Selector가 새로운 객체를 반환하더라도,
+- useShallow가 이전 객체의 프로퍼티(prev.bears)와 현재 객체의 프로퍼티(next.bears)를 하나씩 비교합니다.
+- 내부 값이 모두 같다면, React에게 "데이터가 변하지 않았다"고 알려 리렌더링을 막습니다.
+
+---
+
+# 정리
+
+## 1. 구조 분해 할당 방식
+
+```ts
+const { bears, increasePopulation } = useBearStore();
+```
+
+### 구조 분해 할당의 동작 방식
+
+- Store 전체를 하나의 객체로 구독
+- Selector가 없으면 `identity` 함수(`state => state`)가 기본값으로 사용됨
+
+### 구조 분해 할당의 리렌더링 조건
+
+- Store 내부의 **어떤 상태라도** 변경되면 리렌더링 발생
+- `Object.assign({}, state, nextState)`로 항상 새로운 객체 생성
+- 새 객체는 새로운 메모리 주소를 가짐
+- `Object.is(이전 객체, 새 객체)` -> `false` -> 리렌더링
+
+### 문제점
+
+- 사용하지 않는 상태가 변경되어도 컴포넌트가 리렌더링됨
+
+## 2. Selector 방식
+
+```ts
+const bears = useBearStore((state) => state.bears);
+```
+
+### Selector 방식의 동작 방식
+
+- Selector 함수가 반환하는 **특정 값만** 구독
+- `useSyncExternalStore`가 Selector의 결과값을 snapshot으로 관리
+
+### Selector 방식의 리렌더링 조건
+
+- Selector가 반환한 **해당 값이 실제로 변경**될 때만 리렌더링
+- `Object.is(이전 값, 현재 값)`으로 비교
+- 값이 같으면 -> `true` -> 리렌더링 안 함
+- 값이 다르면 ->`false` -> 리렌더링
+
+### 장점
+
+- 필요한 상태만 정확하게 구독하여 불필요한 리렌더링 방지
+
+## 3. useShallow (여러 상태 구독 시)
+
+```ts
+const { bears, fish } = useBearStore(
+  useShallow((state) => ({ bears: state.bears, fish: state.fish })),
+);
+```
+
+### 필요한 이유
+
+- 일반 Selector로 객체를 반환하면 **매번 새로운 객체 리터럴** 생성
+- 내용이 같아도 참조가 다르면 `Object.is` 비교에서 `false` 반환
+
+### useShallow의 동작 방식
+
+- 객체의 참조가 아닌 **내부 프로퍼티 값을 얕은 비교**
+- `prev.bears === next.bears && prev.fish === next.fish` 방식으로 비교
+- 모든 값이 같으면 변경 없음으로 간주
+
+### 효과
+
+- 여러 상태를 동시에 구독하면서도 최적화된 리렌더링 제어 가능
+
+# 마치며
+
+zustand 내부를 보면서 구조 분해 할당과 selector방식의 차이를 알아봤는데, 앞으로 selector방식을 통해 불필요한 리렌더링을 줄여야겠습니다.
+그리고 store를 만들 때는 너무 많은 상태와 메서드를 가지지 않도록 잘 분리해야겠습니다.
+
+읽어주셔서 감사합니다! 🙇‍♂️
+궁금한 점이나 틀린 부분이 있다면 언제든지 댓글로 알려주세요
+
+## 참고자료
+
+[zustand github](https://github.com/pmndrs/zustand)<br/>
+[zustand docs](https://zustand.docs.pmnd.rs/getting-started/introduction)

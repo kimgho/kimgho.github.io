@@ -1,0 +1,367 @@
+---
+title: "웹 폰트 최적화하는 방법"
+date: "2025-09-30"
+description: "폰트는 이런 맛이구나"
+tag: ["폰트", "CSS"]
+thumbnail: "/images/font.png"
+---
+
+프로젝트를 하면서 GSAP의 SplitText를 사용해서 텍스트 애니메이션을 적용한 부분이 있었습니다.
+근데 서비스 환경에서 새로고침을 하면 시스템 폰트가 적용되서 애니메이션 자체가 이상하게 되어 레이아웃이 깨짐을 겪었습니다.
+이때는 Font Loading API를 사용해서 해결은 했지만, 폰트가 페이지에 주는 영향이 생각보다 많음을 깨달았습니다.
+그래서 이번 기회에 폰트 최적화와 관련된 내용을 정리해보는 시간을 가져보려합니다.
+
+## FOUT, FOIT
+
+폰트와 관련된 UI문제로는 FOUT과 FOIT문제가 있습니다.
+
+### FOUT(Flash of Unstyled Text)
+
+FOUT은 웹 폰트가 로드되기 전에 브라우저가 우선 시스템에 설치된 대체 폰트를 사용하여 텍스트를 화면에 표시하는 현상입니다.
+이후 폰트 로드가 끝나면 텍스트는 새로운 폰트로 교체가 됩니다.
+이 과정에서 순간적으로 텍스트 스타일이 바뀌는 것처럼 보입니다.
+내용을 우선 보여준다는 점에서 FOIT보다 나아보이지만, 갑자기 폰트가 변경되면서 아래 사진처럼 레이아웃이 변경될 수 있습니다.
+
+![](https://velog.velcdn.com/images/kgh67811/post/091d2bf8-8d52-4e98-b599-8a059c139692/image.gif)
+
+### FOIT(Flash of Invisible Text)
+
+FOIT은 웹 폰트가 로드될 때까지 텍스트를 완전히 보이지 않게 숨기는 현상입니다.
+페이지 레이아웃은 렌더링되지만, 텍스트가 있어야 할 공간은 비어 있게 됩니다.
+폰트 로드가 완료되면 그제서야 텍스트가 나타납니다.
+레이아웃 변경을 방지하지만, 폰트 로드가 실패하거나 지연되는 경우 사용자는 콘텐츠를 아예 볼 수 없는 상황을 마주하게 됩니다.
+
+Mitt Romney에 관한 기사에서 FOIT의 문제를 볼 수 있습니다.
+
+<div style="display: flex; justify-content: space-between;">
+  <div style="width: 48%; text-align: center;">
+    <img src="https://velog.velcdn.com/images/kgh67811/post/2ceff966-7a3f-44fe-98b7-c66110a3372d/image.png" alt="첫 번째 이미지 설명" style="max-width: 100%; height: auto;"/>
+    <p style="margin-top: 5px; font-size: 0.9em;">"Not" 글자가 폰트 로드로 인해 보이지 않습니다.</p>
+  </div>
+
+  <div style="width: 48%; text-align: center;">
+    <img src="https://velog.velcdn.com/images/kgh67811/post/bb270594-1452-4a74-b28c-0c7e5dbee85b/image.png" alt="두 번째 이미지 설명" style="max-width: 100%; height: auto;"/>
+    <span style="margin-top: 5px; font-size: 0.9em; display: block;">폰트가 로드 되고 나서야 "Not"글자가 보입니다.</span>
+  </div>
+</div>
+
+## 발생 원인
+
+![](https://velog.velcdn.com/images/kgh67811/post/65928744-2e95-461e-bdb8-2378a834ea56/image.png)
+
+각 시간대 별 실행되는 작업을 보겠습니다.
+
+<table>
+  <thead>
+    <tr>
+      <th>시간대</th>
+      <th>주요 동작</th>
+      <th>결과 및 현상</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <strong>T0</strong>
+      </td>
+      <td>브라우저가 HTML 문서를 서버에 요청합니다.</td>
+      <td>통신 시작</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>T1</strong>
+      </td>
+      <td>
+        HTML 응답이 도착하면 DOM (Document Object Model)을 구성하고, CSS/JS 및 기타 리소스 요청을
+        시작합니다.
+      </td>
+      <td>DOM 트리 생성 시작</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>T2</strong>
+      </td>
+      <td>
+        CSS 응답을 받아 CSSOM (CSS Object Model)을 만들고, DOM과 결합하여 렌더링 트리를 구성합니다.
+        (이때 폰트 리소스를 요청합니다.)
+      </td>
+      <td>렌더링 트리 구성 및 폰트 요청 시작</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>T3</strong>
+      </td>
+      <td>
+        브라우저가 콘텐츠를 화면에 그리고, 폰트가 사용할 수 없는 상태라면 다음 중 하나가 발생합니다.
+      </td>
+      <td>
+        <ul>
+          <li>
+            <strong>FOIT (Flash of Invisible Text):</strong> 폰트 로드 전까지 텍스트가{" "}
+            <strong>보이지 않음</strong>.
+          </li>
+          <li>
+            <strong>FOUT (Flash of Unstyled Text):</strong> 폰트 로드 전까지{" "}
+            <strong>시스템 기본 폰트</strong>로 보이다가 로드 후 웹 폰트로 <strong>교체</strong>됨.
+          </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+폰트는 용량이 크기 때문에 로드하는데 시간이 많이 걸리게 되어 이런 현상이 발생하게 됩니다.
+
+## font-display 속성
+
+`@font-face`의 `font-display`속성을 통해 웹 폰트의 로딩 동작을 지시할 수 있습니다.
+단, 특정 브라우저에서 지원되지 않을 수 있습니다.
+
+<table border="1">
+  <thead>
+    <tr>
+      <th>font-display 값</th>
+      <th>동작 방식</th>
+      <th>장점</th>
+      <th>단점/특징</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>block</code>
+      </td>
+      <td>
+        폰트가 로드되기 전까지 브라우저가 텍스트를 숨김 (<strong>FOIT</strong>)
+      </td>
+      <td></td>
+      <td>텍스트를 볼 수 있을 때까지 기다려야 함</td>
+    </tr>
+    <tr>
+      <td>
+        <code>swap</code>
+      </td>
+      <td>
+        폰트가 로드될 때까지 <strong>대체 폰트</strong>를 사용하여 텍스트를 표시함 (
+        <strong>FOUT</strong>)
+      </td>
+      <td>사용자가 내용을 바로 볼 수 있음</td>
+      <td>
+        폰트 로드 후 적용되면서 내용의 <strong>UI가 갑자기 바뀔 수 있음</strong>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>fallback</code>
+      </td>
+      <td>
+        아주 짧은 시간 동안 텍스트를 가리고 (block), 이후에도 폰트 로딩이 완료가 안 되면{" "}
+        <code>swap</code>처럼 <strong>대체 폰트</strong> 사용
+      </td>
+      <td>
+        <code>block</code>과 <code>swap</code>의 절충안
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        <code>optional</code>
+      </td>
+      <td>
+        <code>fallback</code>과 유사하지만, 폰트를 로드하는 데 <strong>아주 짧은 시간</strong>만
+        제공하고 그 후에는 폰트가 교체되지 않음 (즉, 대체 폰트가 쭉 적용될 수 있음)
+      </td>
+      <td>폰트 교체로 인한 레이아웃 변화 방지</td>
+      <td>대체 폰트가 계속 적용될 수 있음</td>
+    </tr>
+    <tr>
+      <td>
+        <code>auto</code>
+      </td>
+      <td>브라우저 기본 동작을 따름</td>
+      <td></td>
+      <td>브라우저마다 동작이 다를 수 있음</td>
+    </tr>
+  </tbody>
+</table>
+
+## CSS Font Loading API
+
+웹에서는 종종 FOUT이나 FOIT 같은 폰트 로딩 문제가 발생합니다. CSS만으로는 이 타이밍을 정밀하게 제어하기 어려운데, 이를 보완하기 위해 브라우저는 CSS Font Loading API를 제공합니다.
+
+### document.fonts
+
+`document.fonts`는 `FontFaceSet` 객체로, 현재 문서에서 사용되는 폰트들의 상태를 관리합니다. 이를 활용하면 폰트를 직접 정의하고, 로드 과정을 추적하며, 로딩 완료 시점에 맞춰 원하는 작업을 수행할 수 있습니다.
+
+#### 폰트 정의하기
+
+new FontFace(...) 생성자를 통해 자바스크립트 내에서 새로운 폰트를 만들 수 있습니다.
+
+#### 로드 시작하기
+
+font.load() 또는 document.fonts.load()를 호출하면 폰트 다운로드가 시작되며, 완료 시점에 맞춰 Promise가 resolve됩니다.
+
+#### 상태 추적하기
+
+document.fonts에 loading, loadingdone, loadingerror 이벤트 리스너를 달아 로딩 단계를 세밀하게 확인할 수 있습니다.
+
+#### 완료 시점 감지하기
+
+document.fonts.ready는 페이지에 필요한 모든 폰트가 로드되고 레이아웃 계산까지 끝났을 때 resolve되는 Promise로, 후처리를 위한 가장 안정적인 신호입니다.
+
+```javascript
+// FontFace 정의
+const font = new FontFace("my-font", 'url("my-font.woff")');
+
+// 정의한 폰트를 document.fonts에 추가
+document.fonts.add(font);
+
+// 폰트 로드
+font.load();
+
+// 폰트가 준비(로드)될때까지
+document.fonts.ready.then(() => {
+  // Use the font to render text (for example, in a canvas)
+});
+```
+
+## 최적화를 위한 여러 방법
+
+### Preload 사용하기
+
+`<head>`태그에서 폰트를 요청하는 `<link>`태그에 `rel="preload"` 속성을 추가하여, 브라우저에서 폰트를 요청하는 시점을 앞당길 수 있습니다.
+
+```html
+<link rel="preload" href="/akony.woff" as="font" type="font/woff" crossorigin />
+```
+
+일반적으로 브라우저는 현재 페이지에서 필요한 폰트만 다운로드합니다.
+하지만 이 방식의 경우, 애플리케이션에서 사용하는 모든 폰트를 미리 요청하기 때문에 페이지에서 사용되지 않는 폰트까지 모두 로드하게 됩니다.
+
+따라서 폰트가 많은 경우, 별로인 선택지가 됩니다.
+
+### 용량이 작은 포맷을 사용하기
+
+사용하는 포맷에 따라 폰트 파일의 용량이 차이가 납니다.
+아래 사진은 제가 자주 사용하는 Pretendard 폰트의 포맷별 크기입니다.
+
+<div style="display: flex; flex-direction: column; align-items: center; width: 300px; margin: 0 auto; border: 1px solid #ddd;">
+  <div>
+    <img
+      src="https://velog.velcdn.com/images/kgh67811/post/a13c8ca9-049d-43e1-86fb-fea69233f8b5/image.png"
+      style="max-width: 100%; height: auto; display: block;"
+    />
+  </div>
+  <div>
+    <img
+      src="https://velog.velcdn.com/images/kgh67811/post/4d3dc6e1-170a-4848-b586-7c8e77ba1a75/image.png"
+      style="max-width: 100%; height: auto; display: block;"
+    />
+  </div>
+  <div>
+    <img
+      src="https://velog.velcdn.com/images/kgh67811/post/b223de30-93f9-4851-bde9-d42e39696726/image.png"
+      style="max-width: 100%; height: auto; display: block;"
+    />
+  </div>
+  <div>
+    <img
+      src="https://velog.velcdn.com/images/kgh67811/post/847d350e-064a-4a59-977e-e9cee1199e54/image.png"
+      style="max-width: 100%; height: auto; display: block;"
+    />
+  </div>
+</div>
+
+용량 순으로 보면 TTF < OTF < WOFF < WOFF2 순입니다.
+가장 좋은 것은 woff2 형식을 사용하는 것이지만, 브라우저 별로 지원하지 않을 수 있으니 [Can I Use](https://caniuse.com/)를 확인해보면 좋습니다.
+
+<div style="display: flex; justify-content: center; align-items:center; flex-direction: column;">
+  <img
+    src="https://velog.velcdn.com/images/kgh67811/post/ab167a30-7a41-4733-a3f1-abc206329801/image.png"
+    alt="woff2 지원 여부"
+    style="max-width: 80%; 	height: 80%; display:block;"
+  />
+  <p style="text-align: center; color: #8e8e8e;">
+    글 작성 시점에서 woff2의 브라우저별 지원 여부입니다.
+  </p>
+</div>
+
+### 서브셋 폰트 사용하기
+
+만약 특정 글자에만 폰트를 적용하는 상황이라면 전체 폰트보다, 서브셋 폰트를 사용하는 것이 효과적일 수 있습니다.
+서브셋 폰트는 필요한 문자만 포함된 작은 폰트 파일을 생성하는 기술입니다.
+서브렛 폰트 생성은 [transfonter](https://transfonter.org/)에서 할 수 있습니다.
+
+<div style="display: flex; justify-content: center; align-items:center; flex-direction: column;">
+  <img
+    src="https://velog.velcdn.com/images/kgh67811/post/ce9931ed-ca8c-4d91-9aee-d4240bc62c02/image.png"
+    alt="woff2 서브셋"
+    style="max-width: 80%; height: 80%; display:block;"
+  />
+  <p style="text-align: center; color: #8e8e8e;">woff2의 전체 파일 용량의 1/3 수준입니다.</p>
+</div>
+
+프로젝트에 따라 한글,영어의 폰트를 다르게 적용해야 하는 경우가 있을 수 있습니다.
+그런 경우 `@font-face`를 작성할 때 `unicode-range`속성을 통해 지정해주면 됩니다.
+
+```css
+/* 영어 */
+@font-face {
+  font-family: "MyFont";
+  src: url("/src/assets/font/akony.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  unicode-range: U+0020-007F;
+}
+
+/* 한국어 */
+@font-face {
+  font-family: "MyFont";
+  src: url("/src/assets/font/pretendard.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  unicode-range: U+AC00-D7AF;
+```
+
+### Next.js의 경우 next/font 사용하기
+
+`next/font`는 자동 셀프 호스팅을 통해 폰트를 최적화 합니다.
+Google 폰트나 로컬 폰트를 추가하면, Next.js는 빌드 시점에 해당 폰트 파일을 다운로드하여 프로젝트의 정적 자산(static assets)로 포함시킵니다.
+이 경우 사용자가 페이지에 접속할 때 외부 서버에 폰트를 요청할 필요가 없게 되어 네트워크 지연 시간이 줄어들게 됩니다.
+
+그리고 앞서 FOUT으로 인해 레이아웃이 바뀌는 모습을 확인했습니다. 이 문제는 CLS와 연결되어 있기 때문에 사용자 입장에서 당황스러울 수 있습니다.
+하지만 `next/font`는 사용할 웹 폰트의 크기, 자간 등 메트릭 정보를 미리 계산하여 대체 폰트의 스타일을 조정하는 CSS를 생성합니다.
+이때 `size-adjust`,`ascent-override`,`descent-override`,`line-gap-override`와 같은 CSS 속성을 사용하여 대체 폰트가 최종 폰트와 최대한 동일한 스타일이 되도록 만들기 때문에 자연스러운 폰트 전환을 할 수 있습니다.
+
+만약 로컬 폰트가 아닌 Google 폰트를 사용한다면, 자동 폰트 서브셋을 통해 폰트 파일의 용량을 줄여 로딩 시간을 더 줄일 수 있습니다.
+
+```typescript
+import { Noto_Sans_KR } from "next/font/google";
+
+const notoSansKR = Noto_Sans_KR({
+  subsets: ["latin", "korean"],
+  weight: ["400", "700"],
+});
+```
+
+앞서 `preload`를 잘못 사용하면 현재 페이지에서 사용하는 폰트가 아닌, 모든 폰트 파일을 불러올 수 있어 비효율적일 수 있다고 했습니다.
+`next/font`는 페이지 컴포넌트 내부에서 폰트를 선언하면 해당 페이지에 접속할 때만 폰트를 미리 로드합니다.
+기본적으로 `preload: true`이며, `<link rel="preload">`를 자동 생성합니다.
+만약 레이아웃 컴포넌트에서 선언하면, 해당 레이아웃을 사용하는 모든 페이지에서 폰트를 미리 로드합니다.
+루트 레이아웃의 경우, 모든 페이지에서 폰트를 미리 로드하게 됩니다.
+
+## 마치며
+
+평소 폰트에 대해서 별 생각을 안 하고 있었습니다.
+하지만 실제로 문제를 경험해보고, 해결하고, 정리하는 과정에서 폰트가 UI/UX에서 밀접한 관계를 가지고 있음을 깨닫게 되는 시간이었습니다.
+제대로 이해를 하려면 시간이 좀 걸리겠지만, 누군가에게 완벽하게 설명할 수 있을 때까지 이해를 해보려고 합니다.
+
+읽어주셔서 감사합니다! 🙇‍♂️
+궁금한 점이나 틀린 부분이 있다면 언제든지 댓글로 알려주세요
+
+## 참고
+
+[mitt-romney](https://www.zachleat.com/web/mitt-romney-webfont-problem)
+[MDN - Font Loading API](https://developer.mozilla.org/en-US/docs/Web/API/CSS_Font_Loading_API)
+[Naver D2 - 웹폰트 동향](https://d2.naver.com/helloworld/4969726)
+[Next.js 한글문서](https://nextjs-ko.org/docs/pages/building-your-application/optimizing/fonts#preloading)

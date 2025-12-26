@@ -1,0 +1,219 @@
+---
+title: "프로토타입이란 뭘까?"
+date: "2025-10-12"
+description: "알면 알수록 신기한 프로토타입"
+tag: ["JavaScript"]
+thumbnail: "/images/prototype.png"
+---
+
+자바스크립트는 흔히 프로토타입 기반 언어라고 불립니다.
+초기 자바스크립트에는 클래스라는 명확한 설계도 개념이 존재하지 않았고, 대신 **프로토타입(Prototype)** 이라는 메커니즘을 기반으로 객체 간의 상속을 구현해왔습니다.
+
+## 프로토타입 기반 상속
+
+자바스크립트의 상속은 객체 인스턴스가 다른 객체(프로토타입)에 연결되어 필요한 메서드를 해당 프로토타입에서 요청하여 가져오는 형태입니다.
+핵심은 객체 간 참조 연결을 통해 이루어지며, 단순한 객체 복사가 아닌 속성 검색에 기반한 위임 모델입니다.
+
+```javascript
+const parent = {
+  greet() {
+    return `Hello from Parent`;
+  },
+};
+
+const child = Object.create(parent);
+
+console.log(child.hasOwnProperty("greet")); // false
+console.log(child.greet()); // "Hello from Parent" - parent에 위임
+```
+
+- child는 parent의 메서드를 가져온 것이 아닌, parent에게 프로퍼티가 있냐고 물어보는 구조입니다.
+
+## 프로토타입 요소
+
+### [[Prototype]] - 상속의 연결 고리
+
+자바스크립트의 모든 객체가 가지는 내부 슬롯입니다.
+자신의 부모 역할을 하는 프로토타입 객체를 참조하는 링크를 저장합니다.
+
+`[[Prototype]]`에 저장되는 프로토타입은 객체 생성 방식에 의해 결정됩니다.
+
+- **객체 리터럴**: `Object.prototype`을 프로토타입으로 가집니다.
+- **생성자 함수**: 생성자 함수의 `prototype` 프로퍼티가 가리키는 객체를 프로토타입으로 가집니다.
+
+```javascript
+const obj = { name: "obj" }; // 객체 리터럴
+
+function Person(name) {
+  this.name = name;
+}
+const person = new Person("k"); // 생성자 함수
+
+console.dir(obj); // Object
+console.dir(person); // Person
+```
+
+### prototype - 설계도
+
+**오직 함수 객체에만 자동으로 생성됩니다.**
+
+함수가 생성자 함수로 사용될 때, 이 prototype 프로퍼티가 가리키는 객체는 모든 인스턴스가 공통으로 사용할 메서드나 속성을 저장합니다.
+
+`prototype` 객체에 정의된 속성은 인스턴스에 복사되는 것이 아니라, 인스턴스의 `[[Prototype]]`이 `prototype` 객체를 참조하도록 연결됨으로써 공유됩니다.
+
+```javascript
+function Person(name) {
+  this.name = name;
+}
+
+Person.prototype.sayHello = function () {
+  console.log(`Hi, my name is ${this.name}`);
+};
+
+const person1 = new Person("k");
+const person2 = new Person("gh");
+
+person1.sayHello(); // "Hi, my name is k"
+person2.sayHello(); // "Hi, my name is gh"
+
+console.log(person1.hasOwnProperty("sayHello")); // false
+console.log(Object.getPrototypeOf(person1) === Person.prototype); // true
+```
+
+### `__proto__`
+
+`__proto__`는 객체의 내부 `[[Prototype]]` 슬롯에 간접적으로 접근하기 위한 접근자 프로퍼티입니다.
+하지만 `__proto__`를 사용하는 것은 최대한 피해야 합니다.
+
+동적인 프로토타입 조작은 자바스크립트 엔진의 최적화를 방해하여 성능 저하를 유발할 수 있습니다.
+[MDN](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Object/proto)에서는 `Object.getPrototypeOf()`와 `Object.setPrototypeOf()`를 사용할 것을 권장합니다.
+
+```javascript
+const obj = {};
+const proto = { value: 10 };
+
+// 표준 API 사용 (권장)
+Object.setPrototypeOf(obj, proto);
+console.log(obj.value); // 10
+console.log(Object.getPrototypeOf(obj) === proto); // true
+```
+
+## 프로토타입 체인(Prototype Chain)
+
+프로토타입 체인은 자바스크립트 상속의 구현 메커니즘입니다.
+객체들이 링크를 통해 계층적으로 연결된 구조로, 특정 속성에 접근할 때 동적으로 탐색합니다.
+
+### 프로퍼티 탐색 과정
+
+자바스크립트 엔진이 객체의 속성에 접근할 때, 속성이 인스턴스에 복사되어 있는 것이 아니라 체인을 따라 검색하는 방식으로 동작합니다.
+
+1. 객체 자신에게 요청된 프로퍼티가 있는지 확인
+2. 없다면, `[[Prototype]]` 링크를 따라 상위 프로토타입 객체에서 검색
+3. 그래도 없다면, 더 상위 프로토타입 객체의 `[[Prototype]]` 링크를 따라 계속 탐색
+4. 체인의 최상위인 `Object.prototype`에 도달할 때까지 반복
+5. 최종적으로 찾지 못하면 `undefined` 반환
+
+> Object.prototype이 null을 가리킨다면 상속의 종점에 도달한 것입니다.
+
+### 최상위 프로토타입
+
+모든 자바스크립트 객체는 프로토타입 체인을 가지며, 배열, 함수, 객체 등 어떤 객체든 그 체인의 끝은 `Object.prototype`입니다.
+
+`Object.prototype`은 모든 객체가 공통적으로 사용하는 기본 메서드들을 제공합니다.
+`Object.prototype`의 `[[Prototype]]` 슬롯은 `null`을 가리키며, 이것이 프로토타입 체인 검색의 끝을 의미합니다.
+
+### 효율성
+
+프로토타입 체인은 효율성과 재사용성을 위한 방식입니다.
+모든 인스턴스마다 메서드를 복사하는 대신, 하나의 메서드를 프로토타입에 두고 모든 인스턴스가 이를 참조하여 사용합니다.
+
+## ES6 class - 사실 프로토타입
+
+ES6에서 `class` 키워드가 도입되면서 자바스크립트는 겉보기에 클래스 기반 언어와 유사해졌습니다.
+하지만 이는 새로운 객체 지향 모델이 아니라, 프로토타입 기반 상속을 더 직관적으로 사용할 수 있도록 돕는 **구문적 설탕(Syntatic Sugar)** 입니다.
+
+### class 동작 원리
+
+자바스크립트 엔진이 `class` 키워드를 처리할 때, 내부적으로는 여전히 프로토타입 기반의 객체 구조를 생성합니다.
+
+- `class` 선언은 실제로는 생성자 함수를 생성
+- 클래스 내부의 메서드들은 인스턴스에 직접 추가되지 않고, 생성자 함수의 `prototype` 객체에 추가
+
+### 프로토타입 방식 vs Class 방식
+
+```javascript
+// 프로토타입 방식
+function Animal(name) {
+  this.name = name;
+}
+
+Animal.prototype.speak = function () {
+  console.log(`${this.name} makes a noise.`);
+};
+
+function Dog(name, breed) {
+  Animal.call(this, name); // super 역할
+  this.breed = breed;
+}
+
+Dog.prototype = Object.create(Animal.prototype); // extends 역할
+Dog.prototype.constructor = Dog;
+
+Dog.prototype.speak = function () {
+  console.log(`${this.name} barks.`);
+};
+
+const dog = new Dog("Leo", "Poodle");
+dog.speak(); // "Leo barks."
+```
+
+```javascript
+// Class 방식
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+
+  speak() {
+    console.log(`${this.name} makes a noise.`);
+  }
+}
+
+class Dog extends Animal {
+  constructor(name, breed) {
+    super(name);
+    this.breed = breed;
+  }
+
+  speak() {
+    console.log(`${this.name} barks.`);
+  }
+}
+
+const dog = new Dog("Leo", "Poodle");
+dog.speak(); // "Leo barks."
+```
+
+### extends와 super
+
+`extends`는 `Dog.prototype = Object.create(Animal.prototype)`과 같은 복잡한 프로토타입 체인 연결을 하나로 압축합니다.
+
+`super`는 부모 생성자 함수를 호출하고 `this`를 바인딩하는 `Animal.call(this, ...)`패턴을 대체합니다.
+
+결국 자바스크립트의 `class`는 복잡했던 프로토타입 방식을 좀 더 쉽게 선언하는 방식일 뿐, 내부적으로는 여전히 프로토타입 기반으로 동작합니다.
+
+## 정리
+
+`ES6`에 추가된 `class`로 코드가 깔끔해졌지만 자바스크립트의 본질은 결국 프로토타입입니다.
+모든 객체는 체인으로 연결되어 있고, 상속은 복사가 아닌 위임으로 이뤄집니다.
+자바스크립트에서 결국 `class`는 방식의 변화일 뿐, 새로운 개념이 아닙니다.
+프로토타입은 객체 간 협력이라고 볼 수 있습니다.
+
+## 마치며
+
+자바스크립트에서 프로토타입이 정말 중요한 개념이지만 제대로 공부는 해본 적이 없었던 것 같습니다.
+프로토타입이란 개념 자체가 생소했지만 뭔가 공부할수록 머리속으로 구조가 잡혀가는 기분이 들었습니다.
+아직 개념적으로나 다른 예시, 다이어그램같은게 부족하지만 계속 추가할 수 있다면 꾸준히 추가할 예정입니다.
+
+읽어주셔서 감사합니다! 🙇‍♂️
+궁금한 점이나 틀린 부분이 있다면 언제든지 댓글로 알려주세요
