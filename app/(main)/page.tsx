@@ -1,3 +1,5 @@
+import { Metadata } from "next";
+
 import { Spacing } from "@/app/components/ui/Spacing";
 
 import { getAllPosts } from "@/app/utils/posts";
@@ -7,6 +9,22 @@ import { HeroSection } from "@/app/(main)/_components/HeroSection";
 import { PopularTags } from "@/app/(main)/_components/PopularTags";
 import { ProfileCard } from "@/app/(main)/_components/ProfileCard";
 import { RecentPostsSection } from "@/app/(main)/_components/RecentPostsSection";
+
+export const metadata: Metadata = {
+  title: "홈",
+  description: "김건호의 기술 블로그 홈입니다.",
+  openGraph: {
+    title: "김건호 블로그",
+    description: "김건호의 기술 블로그 홈입니다.",
+    images: ["/og-image.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "김건호 블로그",
+    description: "김건호의 기술 블로그 홈입니다.",
+    images: ["/og-image.png"],
+  },
+};
 
 export default function Home() {
   const allPosts = getAllPosts();
