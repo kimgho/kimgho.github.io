@@ -16,10 +16,10 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-solid border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="px-4 md:px-10 py-3 flex items-center justify-between mx-auto ">
-          <Link href="/" className="flex items-center gap-3">
-            <h1 className="text-gray-main text-xl font-bold leading-tight tracking-tight">
-              Kimgho
+        <div className="px-4 md:px-10 py-3 flex items-center justify-between mx-auto">
+          <Link href="/" className="flex items-center group">
+            <h1 className="text-2xl font-serif italic font-medium tracking-tighter text-slate-800 group-hover:text-black transition-colors">
+              KGH
             </h1>
           </Link>
 
@@ -43,9 +43,7 @@ export default function Header() {
             onClick={() => setIsSidebarOpen(true)}
             aria-label="Open menu"
           >
-            <span className="material-symbols-outlined">
-              <Menu />
-            </span>
+            <Menu className="w-6 h-6" />
           </button>
         </div>
       </header>
