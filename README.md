@@ -15,7 +15,7 @@
 - **Tailwind CSS 4** - 유틸리티 퍼스트 CSS
 - **@tailwindcss/typography** - 마크다운 스타일링
 
-### Content (MDX - 예정)
+### Content
 
 - **next-mdx-remote** - MDX 서버사이드 렌더링
 - **gray-matter** - 프론트매터 파싱
@@ -30,6 +30,5 @@
 
 ### Development & Testing
 
-- **Storybook 10** - UI 컴포넌트 개발 환경
 - **ESLint** - 코드 린팅
 - **Prettier** - 코드 포맷팅
