@@ -1,58 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-interface Heading {
-  text: string;
-  level: number;
-  slug: string;
-}
+import { useTOCScroll, Heading } from "@/app/posts/hooks/useTOCScroll";
 
 interface Props {
   headings: Heading[];
 }
 
 export const TableOfContents = ({ headings }: Props) => {
-  const [activeId, setActiveId] = useState("");
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: "0px 0px -40% 0px" },
-    );
-
-    headings.forEach((heading) => {
-      const element = document.getElementById(heading.slug);
-      if (element) observer.observe(element);
-    });
-
-    return () => observer.disconnect();
-  }, [headings]);
-
-  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => {
-    e.preventDefault();
-    const element = document.getElementById(slug);
-    if (element) {
-      const offset = 100;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth",
-      });
-      setActiveId(slug);
-    }
-  };
+  const { activeId, handleScroll } = useTOCScroll(headings);
 
   return (
-    <nav className="flex flex-col gap-0.5 border-l border-slate-100">
+    <nav className="flex flex-col gap-0.5 border-l border-slate-100 max-h-[calc(100vh-160px)] overflow-y-auto scrollbar-hide pb-10">
       {headings.map((heading) => (
         <a
           key={heading.slug}
