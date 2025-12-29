@@ -8,11 +8,11 @@ import {
 } from "@/app/introduction/_components";
 
 export const metadata: Metadata = {
-  title: "김건호 - 자기소개",
+  title: "자기소개",
   description: "김건호의 자기소개 페이지입니다.",
   keywords: ["김건호", "자기 소개", "Introduction"],
   openGraph: {
-    title: "김건호 - 자기소개",
+    title: "자기소개",
     description: "김건호의 자기소개 페이지입니다.",
     type: "website",
     url: "https://kimgho.github.io/introduction",
@@ -22,13 +22,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "김건호 - 자기소개",
+        alt: "자기소개",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "김건호 - 자기소개",
+    title: "자기소개",
     description: "김건호의 자기소개 페이지입니다.",
     images: ["/og-image.png"],
   },
