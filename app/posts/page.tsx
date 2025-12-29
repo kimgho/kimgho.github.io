@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { Metadata } from "next";
 
 import { getAllPosts } from "@/app/utils/posts";
@@ -33,7 +35,9 @@ export default function PostsPage() {
           공부,회고,일상 등 다양한 주제가 있습니다.
         </p>
       </div>
-      <PostList posts={posts} categories={categories} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <PostList posts={posts} categories={categories} />
+      </Suspense>
     </div>
   );
 }
