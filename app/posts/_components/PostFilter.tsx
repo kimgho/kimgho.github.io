@@ -19,6 +19,8 @@ export const PostFilter = ({
   categories,
   categoryCounts,
 }: PostFilterProps) => {
+  const sortedCategories = categories.sort((a, b) => categoryCounts[b] - categoryCounts[a]);
+
   return (
     <aside className="w-full md:w-60 shrink-0">
       <nav
@@ -55,7 +57,7 @@ export const PostFilter = ({
                 </span>
               </Tag>
 
-              {categories.map((category) => (
+              {sortedCategories.map((category) => (
                 <Tag
                   key={category}
                   isActive={selectedCategory === category}
