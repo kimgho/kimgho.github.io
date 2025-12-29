@@ -12,6 +12,7 @@ import { Tag } from "@/app/components/ui";
 
 import { getAllPosts, getPostBySlug } from "@/app/utils/posts";
 
+import { PostNavigation } from "@/app/posts/[slug]/_components/PostNavigation";
 import { TableOfContents } from "@/app/posts/[slug]/_components/TableOfContents";
 import { getHeadings } from "@/app/posts/[slug]/_util/getHeading";
 
@@ -63,6 +64,11 @@ export default async function PostPage({ params }: Props) {
     notFound();
   }
 
+  const posts = getAllPosts();
+  const currentIndex = posts.findIndex((p) => p.slug === slug);
+  const newerPost = currentIndex > 0 ? posts[currentIndex - 1] : null;
+  const olderPost = currentIndex < posts.length - 1 ? posts[currentIndex + 1] : null;
+
   const headings = getHeadings(post.content);
 
   return (
@@ -80,7 +86,7 @@ export default async function PostPage({ params }: Props) {
 
         <article className="lg:col-span-9 max-w-3xl">
           <header className="mb-10 space-y-6">
-            <h1 className="text-4xl md:text-5xl font-black leading-tight tracking-tight text-gray-main">
+            <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight text-gray-main">
               {post.title}
             </h1>
 
@@ -127,6 +133,10 @@ export default async function PostPage({ params }: Props) {
               }}
             />
           </section>
+
+          <hr className="my-12 border-slate-200" />
+
+          <PostNavigation olderPost={olderPost} newerPost={newerPost} />
         </article>
       </div>
     </div>
