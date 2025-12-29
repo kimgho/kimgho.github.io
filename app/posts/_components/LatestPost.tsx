@@ -16,6 +16,7 @@ export const LatestPost = ({ post }: LatestPostProps) => {
     <article className="w-full">
       <Link
         href={`/posts/${post.slug}`}
+        prefetch={false}
         className="group relative block overflow-hidden rounded-2xl bg-slate-900 border border-slate-200 transition-all duration-300 shadow-sm hover:shadow-md"
         aria-labelledby="hero-post-title"
       >
@@ -23,7 +24,7 @@ export const LatestPost = ({ post }: LatestPostProps) => {
           {post.thumbnail ? (
             <Image
               src={post.thumbnail}
-              alt=""
+              alt={`${post.title}의 썸네일`}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-90"
               loading="eager"

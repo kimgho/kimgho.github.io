@@ -17,6 +17,7 @@ export const PostCard = ({ post }: Props) => {
         href={`/posts/${post.slug}`}
         onClick={() => GAPostEvents.clickPost(post.slug, post.title)}
         className="flex flex-col md:flex-row gap-6 w-full"
+        prefetch={false}
       >
         <figure className="w-full md:w-48 aspect-video md:aspect-square shrink-0 rounded-lg bg-slate-100 overflow-hidden">
           {post.thumbnail && (
