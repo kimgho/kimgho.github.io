@@ -1,0 +1,24 @@
+{
+  "Blog Post Frontmatter": {
+    "prefix": "frontmatter",
+    "body": [
+      "---",
+      "title: \"$1\"",
+      "date: \"$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE\"",
+      "description: \"$2\"",
+      "tag: [\"${3|CSS,JavaScript,React,zustand,폰트,회고|}\"]",
+      "thumbnail: \"/images/${4:thumbnail.png}\"",
+      "---",
+      "",
+      "$0"
+    ],
+    "description": "Insert blog post frontmatter"
+  },
+  "Blog Tag Property": {
+    "prefix": "tag",
+    "body": [
+      "tag: [\"${1|CSS,JavaScript,React,zustand,폰트,회고|}\"]"
+    ],
+    "description": "Insert tag property with choices"
+  }
+}
