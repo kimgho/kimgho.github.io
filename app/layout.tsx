@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     default: "프론트엔드를 꿈꾸는 김건호의 블로그",
   },
   description: "프론트엔드를 꿈꾸는 김건호의 블로그",
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
   openGraph: {
     title: "프론트엔드를 꿈꾸는 김건호의 블로그",
     description: "프론트엔드를 꿈꾸는 김건호의 블로그",
