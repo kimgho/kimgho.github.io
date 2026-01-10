@@ -1,0 +1,621 @@
+---
+title: "Next.js 렌더링의 진화 톺아보기"
+date: "2026-01-10"
+description: "다양한 렌더링 방식을 세대별로 보고, 어떤 것이 좋을지 판단해보겠습니다."
+tag: ["Next.js"]
+thumbnail: "/images/nextjs-logo.png"
+---
+
+웹 개발을 하다 보면 "렌더링"이라는 단어를 자주 마주칩니다.
+SSR, SSG, CSR... 다양한 렌더링 방식이 있지만, 결국 이 모든 것의 본질은 하나입니다.
+
+> **"무엇을, 어디서, 언제 그리는가?"**
+
+웹의 발전사는 결국 **TTV(Time To View)** 와 **TTI(Time To Interactive)** 사이의 균형을 맞추기 위한 여정이었습니다.
+이 글에서는 Next.js가 어떻게 이 균형점을 찾아왔는지, 그리고 미래에는 어떤 방향으로 나아가려 하는지 살펴보겠습니다.
+
+<Callout type="info" title="Pages Router → App Router">
+  Next.js 13에서 도입된 App Router는 단순한 문법 변경이 아닌 **아키텍처의 패러다임 변화**입니다.{" "}
+  <br />이 글에서는 이 전환이 왜 필요했고, 어떤 문제를 해결하는지 다룹니다.
+</Callout>
+
+---
+
+## 1세대: 페이지 단위 렌더링 전략 (Classic Patterns)
+
+Pages Router 시절의 렌더링 방식들입니다. 이 방식들의 핵심적인 한계는 **페이지 전체**를 단위로 동작한다는 것입니다.
+
+### CSR (Client Side Rendering)
+
+**핵심: 빈 HTML + 거대한 JS 번들**
+
+클라이언트에서 JavaScript를 사용하여 페이지를 렌더링하는 방식입니다.
+서버는 최소한의 HTML 뼈대와 JS 번들만 보내고, 브라우저가 JS를 실행하여 데이터를 가져오고 동적으로 DOM을 구성합니다.
+
+```html
+<!-- 서버가 보내는 HTML -->
+<!DOCTYPE html>
+<html>
+  <body>
+    <div id="root"></div>
+    <!-- 텅 빈 컨테이너 -->
+    <script src="/bundle.js"></script>
+    <!-- 거대한 JS 번들 -->
+  </body>
+</html>
+```
+
+#### Waterfall 현상
+
+CSR의 가장 큰 문제는 **Waterfall(폭포수) 현상**입니다.
+
+```text
+HTML 다운로드 ->   JS 다운로드 ->  JS 파싱/실행 ->  API 호출  ->   렌더링
+     |              |              |             |           |
+     v              v              v             v           v
+   [0ms]         [200ms]        [500ms]      [800ms]     [1200ms]
+```
+
+모든 단계가 **순차적**으로 진행되어야 하므로, 사용자는 의미 있는 콘텐츠를 보기까지 오랜 시간을 기다려야 합니다.
+
+**성능 지표 관점:**
+
+- **TTFB (Time To First Byte)**: 빠름 (빈 HTML이니까)
+- **FCP (First Contentful Paint)**: 느림 (JS 실행 후에야 콘텐츠 표시)
+- **TTI (Time To Interactive)**: 느림 (모든 JS가 로드되어야 상호작용 가능)
+
+#### 장점
+
+- 페이지 전환이 빠름 (SPA 특성)
+- 서버 부하가 적음
+- 사용자 인터랙션이 풍부함
+
+#### 단점
+
+- SEO가 어려움 (초기 HTML에 콘텐츠가 없음)
+- 초기 로딩이 느림
+- CLS(Cumulative Layout Shift) 발생 가능
+
+<Callout type="info" title="CSR의 SEO 문제">
+  요즘 구글 크롤러는 JS를 실행할 수 있습니다. 하지만 국내 검색 엔진이나 소셜 미디어 미리보기(Open
+  Graph) 봇들은 JS를 실행하지 못하는 경우가 많으므로 여전히 취약합니다
+</Callout>
+
+#### 적합한 사용 사례
+
+- 로그인 후 관리자 대시보드
+- 웹 메일, 소셜 미디어 피드
+- SEO가 필요 없는 내부 도구
+
+---
+
+### SSG (Static Site Generation)
+
+**핵심: 빌드 타임 생성 + CDN 캐싱**
+
+빌드 시점에 미리 HTML 페이지를 생성하는 방식입니다.
+사용자가 페이지를 요청하면 이미 생성되어 CDN에 캐싱된 정적 HTML 파일을 즉시 제공합니다.
+
+```tsx
+// pages/posts/[slug].tsx (Pages Router)
+export async function getStaticProps({ params }) {
+  const post = await getPostBySlug(params.slug);
+  return {
+    props: { post },
+  };
+}
+
+export async function getStaticPaths() {
+  const posts = await getAllPosts();
+  return {
+    paths: posts.map((post) => ({ params: { slug: post.slug } })),
+    fallback: false,
+  };
+}
+```
+
+#### CDN의 마법
+
+SSG의 진정한 힘은 **CDN 캐싱**에서 나옵니다.
+
+```text
+사용자 (서울) -> CDN 엣지 서버 (서울) -> 원본 서버 (미국)
+                      |                 |
+                  캐시 HIT           캐시 미스
+                      |                 |
+             즉시 HTML 반환 (~10ms)     HTML 생성 (~100ms)
+```
+
+**성능 지표 관점:**
+
+- **TTFB**: 매우 빠름 (CDN 엣지에서 즉시 응답)
+- **FCP**: 매우 빠름 (완성된 HTML 즉시 표시)
+- **TTI**: HTML 표시 후 JS 하이드레이션 필요
+
+#### 한계: 빌드 시점과 요청 시점간 미스매치
+
+SSG의 치명적인 한계는 **데이터 변경 시점** 과 **사용자 요청 시점**입니다.
+
+```text
+[빌드 시점]             [데이터 변경]          [사용자 요청]
+    |                     |                    |
+    v                     v                    v
+ 가격: 10,000원      가격: 8,000원        여전히 10,000원 표시
+```
+
+또한 페이지 수가 많아질수록 **빌드 시간이 기하급수적으로 증가**합니다.
+
+#### 장점
+
+- 가장 빠른 TTFB
+- 서버 부하 없음
+- 보안성이 높음 (공격 표면이 적음)
+- SEO 친화적
+
+#### 단점
+
+- 빌드 후 데이터 업데이트 불가
+- 빌드 시간이 길어질 수 있음
+- 사용자별 맞춤 콘텐츠 제공 어려움
+
+#### 적합한 사용 사례
+
+- 블로그, 문서 사이트
+- 랜딩 페이지, 포트폴리오
+- 콘텐츠 변경이 적은 정적 페이지
+
+---
+
+### SSR (Server Side Rendering) - Traditional
+
+**핵심: 요청 타임 생성 + 동적 데이터**
+
+요청 시점마다 서버에서 HTML 페이지를 생성하는 방식입니다.
+사용자가 페이지를 요청하면 서버는 필요한 데이터를 가져와 동적으로 HTML을 렌더링합니다.
+
+```tsx
+// pages/dashboard.tsx (Pages Router)
+export async function getServerSideProps({ req }) {
+  const user = await getUser(req.cookies.token);
+  const data = await getDashboardData(user.id);
+
+  return {
+    props: { user, data },
+  };
+}
+```
+
+#### All or Nothing 문제
+
+전통적인 SSR의 가장 큰 문제는 **전부 아니면 전무(All or Nothing)** 입니다.
+
+```tsx
+export async function getServerSideProps() {
+  // 이 모든 데이터가 준비될 때까지 사용자는 하얀 화면만 봅니다
+  const user = await getUser(); // 100ms
+  const posts = await getPosts(); // 500ms
+  const recommendations = await getRecommendations(); // 2000ms(병목지점)
+
+  // 총 2.6초 후에야 HTML 전송 시작
+  return { props: { user, posts, recommendations } };
+}
+```
+
+```text
+[요청]                                    [첫 응답]
+   |──────────── 2.6초 대기 ──────────────→|
+   |           (하얀 화면)                  | HTML 전송
+```
+
+#### 하이드레이션(Hydration) 비용
+
+HTML은 빨리 보이지만, **JS가 다 로드되기 전까지 버튼이 동작하지 않습니다.**
+
+```text
+[HTML 표시]              [JS 로드 완료]             [상호작용 가능]
+     |                        |                        |
+     v                        v                        v
+  화면은 보임            클릭해도 반응 없음                  동작
+
+|-- FCP --|----------- "유령 UI" 구간 ------------|---- TTI ----|
+```
+
+#### 장점
+
+- 항상 최신 데이터 표시
+- SEO 친화적
+- 사용자별 맞춤 콘텐츠 가능
+
+#### 단점
+
+- 느린 데이터가 전체 응답을 지연시킴
+- 서버 부하 증가
+- 서버 장애 시 페이지 제공 불가
+
+#### 적합한 사용 사례
+
+- 사용자별 대시보드, 마이페이지
+- 실시간 재고/가격이 중요한 이커머스
+- 인증 상태에 따른 동적 페이지
+
+---
+
+### ISR (Incremental Static Regeneration)
+
+**핵심: SSG의 속도 + SSR의 신선함**
+
+SSG의 성능과 SSR의 최신성을 절충한 방식입니다.
+빌드 시점에 페이지를 생성하지만, 설정된 주기가 지나면 백그라운드에서 페이지를 다시 생성합니다.
+
+```tsx
+// pages/products/[id].tsx
+export async function getStaticProps({ params }) {
+  const product = await getProduct(params.id);
+
+  return {
+    props: { product },
+    revalidate: 60, // 60초마다 백그라운드에서 재생성
+  };
+}
+```
+
+#### Stale-While-Revalidate 패턴
+
+ISR은 **SWR(Stale-While-Revalidate)** 캐싱 전략을 사용합니다.
+
+```text
+[첫 번째 요청]        [60초 후 요청]         [백그라운드 재생성]          [다음 요청]
+      |                  |                     |                    |
+      v                  v                     v                    v
+   캐시 생성            캐시 반환              새 HTML 생성            새 캐시 반환
+                   (stale 데이터)           (백그라운드)
+```
+
+#### On-Demand ISR
+
+API 요청을 통해 특정 페이지만 수동으로 재생성할 수도 있습니다.
+
+```tsx
+// pages/api/revalidate.ts
+export default async function handler(req, res) {
+  await res.revalidate("/products/123");
+  return res.json({ revalidated: true });
+}
+```
+
+#### 장점
+
+- SSG처럼 빠른 첫 응답
+- 전체 빌드 없이 페이지 업데이트 가능
+- 서버 부하 적음
+
+#### 단점
+
+- revalidate 주기 동안 stale 데이터 가능
+- 여전히 **페이지 단위** 갱신
+- 실시간성 완전 보장 불가
+
+#### 적합한 사용 사례
+
+- 주기적으로 업데이트되는 블로그/뉴스
+- 실시간이 아니어도 되는 이커머스 상품 목록
+- 댓글이 추가되는 게시물
+
+---
+
+## 2세대: 컴포넌트 단위와 스트리밍 (The Paradigm Shift)
+
+여기서부터 Next.js 13+ (App Router)의 핵심입니다.
+**페이지 단위**에서 **컴포넌트 단위**로의 패러다임 전환이 일어납니다.
+
+### RSC (React Server Components)
+
+**개념: 서버 컴포넌트와 클라이언트 컴포넌트의 분리**
+
+App Router에서 모든 컴포넌트는 기본적으로 **서버 컴포넌트**입니다.
+
+```tsx
+// app/products/[id]/page.tsx - 서버 컴포넌트
+import { db } from "@/lib/db";
+
+export default async function ProductPage({ params }) {
+  // 컴포넌트 내부에서 직접 DB 쿼리
+  const product = await db.product.findUnique({
+    where: { id: params.id },
+  });
+
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <AddToCartButton product={product} /> {/* 클라이언트 컴포넌트 */}
+    </div>
+  );
+}
+```
+
+```tsx
+// components/AddToCartButton.tsx - 클라이언트 컴포넌트
+"use client";
+
+import { useState } from "react";
+
+export function AddToCartButton({ product }) {
+  const [isAdding, setIsAdding] = useState(false);
+  // 상태, 이벤트 핸들러 사용 가능
+}
+```
+
+#### Zero Bundle Size
+
+서버 컴포넌트의 가장 큰 혁신은 **Zero Bundle Size**입니다.
+
+```tsx
+// 서버 컴포넌트
+// 30KB
+import { format } from "date-fns";
+import { marked } from "marked";
+// 20KB
+import { highlight } from "prismjs";
+
+// 50KB
+
+export default async function BlogPost({ content }) {
+  // 이 모든 라이브러리는 서버에서만 실행됨
+  // 클라이언트 번들에는 포함되지 않음 = 0KB
+  const html = marked(content);
+  return <article dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+
+**클라이언트 번들 크기 비교:**
+
+- CSR: marked + date-fns + prismjs = **~100KB**
+- RSC: **0KB** (서버에서 이미 처리됨)
+
+#### 백엔드 직접 접근 + Data Cache
+
+API 레이어를 거치지 않아 **Latency가 감소**합니다.
+
+```text
+[기존 CSR]
+클라이언트 -> API Route -> 데이터베이스
+    |           |            |
+ 100ms       100ms        50ms  = 총 250ms
+
+[RSC]
+서버 컴포넌트 -> 데이터베이스
+      |            |
+   (동일 서버)     50ms  = 총 50ms
+```
+
+게다가 서버 컴포넌트에서 `fetch`를 사용할 경우, 결과를 **Data Cache**에 저장할 수 있습니다.
+동일한 요청이 들어오면 DB나 외부 API를 다시 호출하지 않고 캐시된 데이터를 즉시 반환합니다.
+
+<Callout type="info" title="버전별 fetch 기본 동작">
+  **Next.js 14**: `fetch`는 기본적으로 캐싱됨 (`cache: 'force-cache'` 기본값)
+  <br />
+  **Next.js 15+**: `fetch`는 기본적으로 캐싱되지 않음 (`cache: 'no-store'` 기본값)
+</Callout>
+
+```tsx
+// Next.js 15+에서는 캐싱 X
+// DB 직접 쿼리 시에는 React의 cache 래퍼 사용 (버전 무관)
+import { cache } from "react";
+
+// Next.js 15 이상에서는 캐싱을 원하면 명시적으로 옵션 지정 필요
+const cachedData = await fetch(url, { cache: "force-cache" }); // 캐싱 O
+const freshData = await fetch(url);
+
+export const getPost = cache(async (slug) => {
+  return await db.query.posts.findFirst({ where: eq(posts.slug, slug) });
+});
+```
+
+---
+
+### Streaming SSR (스트리밍 SSR)
+
+> "HTML은 하나의 거대한 덩어리가 아니라, 흐르는 물줄기다."
+
+#### 기존 SSR의 문제 해결
+
+Streaming SSR은 데이터가 준비되는 순서대로 HTML 조각(Chunk)을 보냅니다.
+
+```tsx
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+
+import Header from "./Header";
+import Recommendations from "./Recommendations";
+import UserInfo from "./UserInfo";
+
+export default function Dashboard() {
+  return (
+    <div>
+      <Header /> {/* 즉시 렌더링 */}
+      <Suspense fallback={<UserInfoSkeleton />}>
+        <UserInfo /> {/* 100ms 후 스트리밍 */}
+      </Suspense>
+      <Suspense fallback={<RecommendationsSkeleton />}>
+        <Recommendations /> {/* 2초 후 스트리밍 */}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+#### 동작 방식 시각화
+
+```text
+시간 →    0ms     100ms    500ms    1000ms   2000ms
+          |        |        |        |        |
+          v        v        v        v        v
+[서버]   ┌────────┬────────┬────────┬────────┬────────┐
+        │ Header │UserInfo│        │        │ Recom  │
+        │ Shell  │ Chunk  │        │        │ Chunk  │
+        └────────┴────────┴────────┴────────┴────────┘
+              |       |                         |
+[브라우저] ┌─────────────────────────────────────────┐
+         │ Header │ UserInfo │  Loading... │→│ 추천 │
+         └─────────────────────────────────────────┘
+```
+
+**기존 SSR과의 비교:**
+
+- **기존 SSR**: 2초 후에야 첫 HTML 응답
+- **Streaming SSR**: 즉시 Shell 전송, 이후 점진적 업데이트
+
+**성능 지표 관점:**
+
+- **TTFB**: 개선 (Shell 의존)
+- **FCP**: 빠름 (즉시 의미 있는 콘텐츠 표시)
+- **LCP**: 개선 (메인 콘텐츠가 빨리 표시됨)
+
+---
+
+### Selective Hydration (선택적 하이드레이션)
+
+**개념: 필요한 부분만 먼저 깨우기**
+
+전통적인 하이드레이션은 **전체 페이지의 JS를 한 번에** 로드하고 실행했습니다.
+Selective Hydration은 **필요한 부분만 우선적으로** 하이드레이션합니다.
+
+```text
+[전통적 하이드레이션]
+전체 JS 로드 ->   전체 하이드레이션 ->    전체 상호작용 가능
+     |                |                    |
+   2000ms          500ms               2500ms (TTI)
+
+[선택적 하이드레이션]
+Header JS -> UserInfo JS -> 사용자 클릭 -> 우선 하이드레이션
+   |            |              |              |
+ 200ms       400ms          500ms          600ms (해당 부분 TTI)
+```
+
+#### 사용자 중심 우선순위
+
+페이지 전체가 로드되지 않았어도, **사용자가 상호작용하려는 부분**을 React가 감지하여 해당 부분의 하이드레이션을 최우선으로 처리합니다.
+
+```tsx
+<Suspense fallback={<CommentsSkeleton />}>
+  <Comments /> {/* 사용자가 여기를 클릭하면 */}
+</Suspense>   {/* React가 이 부분을 먼저 하이드레이션 */}
+```
+
+---
+
+## 3세대: 정적과 동적의 완벽한 결합 (The Future)
+
+### Partial Prerendering (PPR)
+
+> "SSG의 속도와 SSR의 유연성을 **하나의 HTTP 요청**에 담다."
+
+<Callout type="warning" title="버전별 PPR 상태">
+  **Next.js 14/15 canary**: `experimental.ppr: true`로 활성화 (실험적 기능)
+  <br />
+  **Next.js 16**: `cacheComponents: true`로 대체됨 (동작 방식 변경)
+</Callout>
+
+#### 개념: Shell & Holes 아키텍처
+
+웹사이트의 90%는 정적이고, 10%만 동적입니다.
+PPR은 이 사실을 활용합니다.
+
+```tsx
+// app/products/[id]/page.tsx
+export default async function ProductPage({ params }) {
+  const product = await getProduct(params.id); // 빌드 타임에 생성 (정적)
+
+  return (
+    <div>
+      {/* Static Shell - 빌드 타임에 생성 */}
+      <Header />
+      <ProductInfo product={product} />
+      <Footer />
+
+      {/* Dynamic Holes - 요청 타임에 스트리밍 */}
+      <Suspense fallback={<CartSkeleton />}>
+        <CartWidget /> {/* 사용자별 장바구니 */}
+      </Suspense>
+
+      <Suspense fallback={<ReviewsSkeleton />}>
+        <Reviews productId={params.id} /> {/* 실시간 리뷰 */}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+#### 동작 방식
+
+```text
+[빌드 타임]
+┌──────────────────────────────────────┐
+│  Header  │  ProductInfo  │  Footer   │  ← 정적 Shell 생성
+├──────────┼───────────────┼───────────┤
+│  [HOLE]  │               │  [HOLE]   │  ← 동적 영역 마킹
+└──────────────────────────────────────┘
+
+[요청 타임]
+1. 즉시 정적 Shell 전송 (CDN 속도)
+2. 동적 Hole들을 서버에서 스트리밍
+3. 클라이언트에서 Hole에 콘텐츠 삽입
+```
+
+#### 기존 방식과의 차별점
+
+**기존 SSG + CSR:**
+
+```text
+[정적 페이지 로드] -> [클라이언트 JS 실행]   ->   [API 호출] -> [동적 데이터 표시]
+      |                   |                   |              |
+    50ms                200ms               300ms          500ms
+                          |
+                    Waterfall 발생
+```
+
+**PPR:**
+
+```text
+[정적 Shell 즉시 전송]  ->   [동적 Hole 스트리밍]
+         |                       |
+       50ms                 100ms (병렬 처리)
+         |                       |
+      CDN 속도             서버 -> 브라우저 직통
+```
+
+**Waterfall이 완전히 제거**됩니다.
+
+---
+
+## 렌더링 전략 비교 요약
+
+![렌더링 별 요약표](/images/render-table.png)
+
+## 결론: 어떤 전략을 선택해야 할까?
+
+렌더링 전략 선택의 핵심은 **트레이드오프**를 이해하는 것입니다.
+
+### 의사결정 플로우
+
+```text
+데이터가 자주 변하나요?
+├── 아니오 -> SSG (블로그, 문서)
+└── 예 -> 실시간이어야 하나요?
+         ├── 아니오 -> ISR (뉴스 목록, 상품 카탈로그)
+         └── 예 -> SEO가 중요한가요?
+                  ├── 아니오 -> CSR (대시보드, 관리자 페이지)
+                  └── 예 -> 일부만 동적인가요?
+                           ├── 예 -> PPR (이커머스, 포털)
+                           └── 아니오 -> Streaming SSR (소셜 피드)
+```
+
+반드시 이 플로우가 정답은 아닙니다. 상황,리소스 등 고려사항이 많기 때문에 가장 최선의 선택을 찾아가는 것이 중요합니다.
+
+---
+
+## 참고 자료
+
+- [Next.js 공식 문서 - Loading UI and Streaming](https://nextjs.org/docs/app/building-your-application/routing/loading-ui-and-streaming)
+- [React 공식 문서 - Suspense](https://react.dev/reference/react/Suspense)
+- [Vercel Blog - Partial Prerendering](https://vercel.com/blog/partial-prerendering-with-next-js-creating-a-new-default-rendering-model)
