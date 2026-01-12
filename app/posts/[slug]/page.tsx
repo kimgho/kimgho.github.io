@@ -1,17 +1,14 @@
 import { Metadata } from "next";
-import { MDXRemote } from "next-mdx-remote/rsc";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { List } from "lucide-react";
-import rehypePrettyCode from "rehype-pretty-code";
-import rehypeSlug from "rehype-slug";
 
-import { Pre } from "@/app/components/mdx/Pre";
 import { Tag } from "@/app/components/ui";
 
 import { getAllPosts, getPostBySlug } from "@/app/utils/posts";
 
+import { PostMainContent } from "@/app/posts/[slug]/_components/PostMainContent";
 import { PostNavigation } from "@/app/posts/[slug]/_components/PostNavigation";
 import { TableOfContents } from "@/app/posts/[slug]/_components/TableOfContents";
 import { getHeadings } from "@/app/posts/[slug]/_util/getHeading";
@@ -20,7 +17,7 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
+export function generateStaticParams() {
   const posts = getAllPosts();
   return posts.map((post) => ({
     slug: post.slug,
@@ -111,28 +108,7 @@ export default async function PostPage({ params }: Props) {
             </figure>
           )}
 
-          <section className="prose prose-slate max-w-none font-body prose-headings:font-display prose-headings:tracking-tight prose-headings:scroll-mt-28 prose-a:text-blue-600 prose-code:text-blue-600 prose-code:bg-blue-600/10 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-main prose-pre:border prose-pre:border-slate-700">
-            <MDXRemote
-              source={post.content}
-              components={{
-                pre: Pre,
-              }}
-              options={{
-                mdxOptions: {
-                  rehypePlugins: [
-                    rehypeSlug,
-                    [
-                      rehypePrettyCode,
-                      {
-                        theme: "github-dark",
-                        keepBackground: false,
-                      },
-                    ],
-                  ],
-                },
-              }}
-            />
-          </section>
+          <PostMainContent content={post.content} />
 
           <hr className="my-12 border-slate-200" />
 
