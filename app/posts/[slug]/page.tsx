@@ -88,7 +88,7 @@ export default async function PostPage({ params }: Props) {
             </h1>
 
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span className="font-semibold text-slate-900">KimGho</span>
+              <span className="font-semibold text-slate-900">kimgho</span>
               <span className="text-slate-300" aria-hidden="true">
                 |
               </span>
