@@ -20,7 +20,7 @@ export const EducationSection = () => {
           <div className="grow">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center">
               <h3 className="text-xl font-bold text-gray-main">경북대학교</h3>
-              <time className="text-lg text-gray-secondary">2023 - 2026.02</time>
+              <time className="text-lg text-gray-secondary">2023 - 2026.02(졸업 예정)</time>
             </div>
             <p className="text-gray-sub font-medium">컴퓨터학부 심화컴퓨터공학 전공</p>
           </div>
