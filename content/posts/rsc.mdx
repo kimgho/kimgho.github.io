@@ -1,0 +1,512 @@
+---
+title: "React Server Component 톺아보기"
+date: "2026-01-26"
+description: "React Server Component에 대해 알아보는 시간"
+tag: ["react", "nextjs"]
+thumbnail: "/images/nextjs-logo.png"
+---
+
+# React가 서버로 간 이유
+
+## 기존 CSR의 한계
+
+기존 CSR(Client Side Rendering) 방식은 React의 탄생 이후 오랫동안 SPA의 표준이었습니다.
+하지만 현대의 웹 애플리케이션이 복잡해지면서 여러 문제점들이 발생했습니다.
+
+### 1. 초기 로딩 시간
+
+CSR에서는 모든 UI 컴포넌트, 상태 관리 로직, 유틸리티 함수, 그리고 서드파티 라이브러리가 하나의 JavaScript 번들에 포함됩니다.
+
+```text
+[사용자 요청]
+    V
+[빈 HTML 다운로드] (거의 빈 껍데기)
+    V
+[JavaScript 번들 다운로드] (MB단위가 될 수 있음)
+    V
+[JavaScript 파싱 & 실행]
+    V
+[React 앱 초기화]
+    V
+[화면 렌더링]
+```
+
+문제는 현대 웹 애플리케이션의 번들 사이즈가 거대하다는 것입니다. 예를 들어
+
+moment.js: ~300KB (minified)<br/>
+lodash: ~70KB<br/>
+chart.js: ~200KB<br/>
+기타 UI 라이브러리, 상태 관리 등...
+
+사용자는 첫 화면을 보기 전에 이 모든 코드를 다운로드하고 파싱해야 합니다.
+
+### 2. Network Waterfall
+
+데이터 페칭이 순차적으로 일어나면서 발생할 수 있는 문제입니다.
+
+```text
+[시간 흐름]
+
+1. HTML 다운로드 ████
+2. JS 번들 다운로드      ████████████
+3. React 실행                          ████
+4. 데이터 요청 (API)                        ████████
+5. 화면 렌더링                                      ████
+
+총 시간: ═══════════════════════════════════════════════
+```
+
+각 단계가 이전 단계가 완료된 후에야 시작됩니다.
+
+- JavaScript가 다운로드되기 전까지 React 앱을 실행할 수 없음
+- React가 실행되기 전까지 어떤 데이터가 필요한지 알 수 없음
+- 데이터가 도착하기 전까지 실제 UI를 그릴 수 없음
+
+이 문제는 네트워크 지연 시간을 누적시켜 사용자 체감 로딩 시간을 크게 증가시킵니다.
+
+### 3.SEO
+
+CSR 애플리케이션의 초기 HTML은 대략 이렇게 생겼습니다
+
+```html
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>CSR</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/bundle.js"></script>
+  </body>
+</html>
+```
+
+우리가 보기엔 문제가 없어보여도 크롤러 입장에서는 다릅니다.
+
+검색 엔진 크롤러는 이 HTML을 보게 됩니다. 문제는:
+
+- 콘텐츠가 없음: 실제 콘텐츠는 JavaScript가 실행된 후에야 생성됨
+- 크롤링 비용: Google 등의 크롤러가 JavaScript를 실행하려면 추가 리소스가 필요
+- 인덱싱 불확실성: JavaScript 렌더링은 크롤러의 "2차 웨이브"에서 처리되어 인덱싱이 지연되거나 누락될 수 있음
+
+## SSR의 한계 (Hydration 비용)
+
+SSR(Server-Side Rendering)은 서버에서 HTML을 완성해서 보내므로
+
+- 초기 콘텐츠가 빠르게 표시됨
+- SEO 문제 해결
+- API 키 등을 서버에서 처리 가능
+
+하지만 SSR도 완벽하지 않았습니다.
+
+### Hydration이란
+
+SSR에서 서버가 보내는 HTML은 정적입니다. 버튼을 클릭해도 아무 일도 일어나지 않습니다.
+
+```html
+<!-- 서버가 보낸 HTML - 예쁘게 보이지만 버튼은 클릭할 수 없음 -->
+<button>좋아요 - 42</button>
+```
+
+이 HTML에 생명을 불어넣는 과정이 바로 Hydration입니다.
+
+```text
+[Hydration 과정]
+
+1. 서버: HTML 생성 & 전송
+2. 브라우저: HTML 표시 (사용자는 UI를 볼 수 있으나 클릭 불가)
+3. 브라우저: JavaScript 번들 다운로드
+4. 브라우저: React가 기존 HTML에 이벤트 핸들러 연결 (Hydration)
+5. 이제야 상호작용 가능
+```
+
+> 서버에서 그려준 HTML 파일에 리액트가 해당 HTML 코드의 DOM을 제어할 수 있도록 붙여주는 작업을 의미합니다.
+
+### Hydration의 문제점
+
+전통적인 SSR에서는 페이지의 모든 컴포넌트가 Hydration 대상입니다.<br/>
+결국 상호작용을 위해 전체 JavaScript 번들 파일을 다운로드하고 실행해야 합니다.<br/>
+이는 화면은 보이지만 버튼을 눌러도 아무 응답이 없어 사용자 경험을 떨어뜨리는 문제가 발생할 수 있습니다.
+
+```javascript
+function Page() {
+  return (
+    <Layout>                    {/* Hydration 필요 */}
+      <Header />                {/* Hydration 필요 */}
+      <Sidebar />               {/* Hydration 필요 */}
+      <Article content={...} /> {/* 정적 콘텐츠인데도 Hydration 필요 */}
+      <Comments />              {/* Hydration 필요 */}
+      <Footer />                {/* Hydration 필요 */}
+    </Layout>
+  )
+}
+```
+
+문제
+
+- Article처럼 상호작용이 전혀 없는 컴포넌트도 Hydration 과정을 거쳐야 합니다.
+- 이 컴포넌트의 JavaScript 코드가 번들에 포함되고, 브라우저에서 실행되어야 합니다.
+
+## 목표: Zero Bundle Size + 백엔드 직접 접근
+
+React 팀은 위 문제들을 해결하기 위해 근본적인 질문을 던졌습니다:
+
+> 모든 컴포넌트가 클라이언트에서 실행될 필요가 있는가?
+
+그 답이 **React Server Components**입니다.
+
+핵심 아이디어는 간단합니다.
+**"브라우저에서 렌더링하지 말고, 서버에서 렌더링을 해서 보내자."**
+
+### Zero Bundle Size 컴포넌트
+
+```javascript
+import { marked } from "marked"(번들에 포함 안 됨)
+
+// 이 컴포넌트는 서버에서만 실행됨
+async function Article({ id }) {
+  const content = await db.articles.get(id);
+  const parsedContent = marked(content);
+
+  return <div className="content">{parsedContent}</div>;
+}
+```
+
+결과
+
+- marked 같은 무거운 라이브러리가 클라이언트 번들에서 완전히 제외됩니다.
+- 해당 컴포넌트의 로직 코드도 브라우저로 전송되지 않습니다.
+- 사용자에게 전송되는 것은 직렬화된 데이터(RSC Payload) 뿐이므로, 브라우저는 이를 해석해 뷰만 업데이트합니다.
+
+### 백엔드 직접 접근
+
+RSC는 서버에서 실행해서 보내므로
+
+```javascript
+// Server Component - 서버에서만 실행됨
+async function UserDashboard({ userId }) {
+  // 데이터베이스 직접 접근 (API 불필요)
+  const user = await db.users.findById(userId)
+  const orders = await db.orders.getByUser(userId)
+  const analytics = await db.analytics.getStats(userId)
+
+  // 파일 시스템 접근
+  const config = await fs.readFile('./config.json')
+
+  // 민감한 API 호출 (키가 클라이언트에 노출되지 않음)
+  const externalData = await fetch('https://api~', {
+    headers: { 'Authorization': `Bearer ${process.env.SECRET_KEY}` }
+  })
+
+  return <Dashboard user={user} orders={orders} {...} />
+}
+```
+
+RSC 서버 -> 직접 DB접근 (Hydration 없음, 번들 크기 0)이 됩니다.
+
+### Network Waterfall 해결
+
+RSC에서는 데이터 페칭이 렌더링 과정 중에 발생합니다.
+
+```text
+[RSC 방식]
+
+서버                                    클라이언트
+├─ 컴포넌트 렌더링 시작
+├─ DB 쿼리 실행 (병렬 가능)
+├─ 렌더링 완료
+├─ RSC Payload 스트리밍 ─────────────→ 점진적 UI 업데이트
+│                                       (Hydration 최소화)
+└─ 완료
+
+---
+
+[CSR]
+HTML -> JS 번들 -> React 실행 -> API 호출 -> 렌더링
+      -순차적, 느림-
+
+[RSC]
+RSC Payload (데이터 포함) -> 즉시 렌더링
+      -서버에서 모든 준비 완료-
+```
+
+# RSC란 무엇인가?
+
+## RSC의 정의
+
+React Server Components(RSC)는 서버에서만 실행되고, 클라이언트 JavaScript 번들에 포함되지 않는 새로운 유형의 React 컴포넌트입니다.
+
+React 공식 문서에서는 다음과 같이 정의합니다:
+
+> Server Components are a new option that allows rendering components ahead of time, before bundling, in an environment separate from your client application or SSR server."
+
+핵심 특징으로는
+
+- 실행 환경: 서버(Node.js, Edge Runtime 등)
+- 실행 시점: 빌드 타임 또는 요청 시점(Request Time)
+- 번들 포함: 클라이언트 번들에 포함되지 않음
+- 데이터 접근: 데이터베이스, 파일 시스템 직접 접근 가능
+- 상태(State): useState, useEffect 등 사용 불가
+- 이벤트 핸들러: onClick, onChange 등 사용 불가
+
+이 있습니다.
+
+## Server Component vs Client Component
+
+RSC를 이해하려면, 먼저 Server Component(이후 RSC라고 하겠습니다.)와 Client Component의 차이를 명확히 알아야 합니다.
+
+### Server Component
+
+Server Component (기본값)<br/>
+Next.js App Router에서는 모든 컴포넌트가 기본적으로 Server Component입니다.
+
+```javascript
+// app/page.tsx - Server Component (기본)
+async function ProductPage({ id }) {
+  // 서버에서 직접 DB 접근 가능
+  const product = await db.products.findById(id);
+
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      <span>₩{product.price.toLocaleString()}</span>
+    </div>
+  );
+}
+```
+
+특징:
+
+- async/await 사용 가능 (컴포넌트 자체가 async 함수)
+- DB, 파일 시스템, 환경 변수 등 서버 리소스에 직접 접근
+- 렌더링 결과만 클라이언트로 전송 (코드는 전송되지 않음)
+
+### Client Component
+
+상호작용이 필요한 컴포넌트는 "use client" 지시어를 사용해 명시적으로 Client Component로 선언해야 합니다.
+
+```javascript
+// components/LikeButton.tsx - Client Component
+"use client";
+
+import { useState } from "react";
+
+function LikeButton({ initialCount }) {
+  const [count, setCount] = useState(initialCount);
+
+  return <button onClick={() => setCount((c) => c + 1)}>{count}</button>;
+}
+```
+
+특징:
+
+- "use client" 지시어 필수
+- useState, useEffect 등 React Hooks 사용 가능
+- 이벤트 핸들러 (onClick, onChange 등) 사용 가능
+- 브라우저 API 접근 가능 (window, document, localStorage 등)
+- 이 컴포넌트의 코드는 클라이언트 번들에 포함됨
+
+## RSC vs SSR
+
+RSC와 SSR은 혼동하기 쉬운 개념입니다.<br/>
+하지만 이 둘은 전혀 다른 개념이며, 서로를 대체하는 것이 아니라 보완하는 관계입니다.
+
+### SSR
+
+SSR은 HTML 문자열을 생성합니다.
+
+```text
+[SSR 처리 과정]
+
+서버
+├─ React 컴포넌트 실행
+├─ Virtual DOM 생성
+├─ HTML 문자열로 변환
+└─ 출력: "<div><h1>Hello</h1><button>Click</button></div>"
+
+클라이언트
+├─ HTML 수신 및 표시
+├─ JavaScript 번들 다운로드
+├─ Hydration (이벤트 핸들러 연결)
+└─ 상호작용 가능
+```
+
+SSR의 출력물: 완성된 HTML 문자열
+
+```html
+<!DOCTYPE html>
+<html>
+  <body>
+    <div id="root">
+      <div>
+        <h1>Hello</h1>
+        <button>Click</button>
+      </div>
+    </div>
+    <script src="/bundle.js"></script>
+    <!-- 전체 JS 번들 -->
+  </body>
+</html>
+```
+
+### RSC
+
+RSC는 **직렬화된 React 트리 (RSC Payload)** 를 생성합니다.
+
+```text
+[RSC 처리 과정]
+
+서버
+├─ Server Component 실행
+├─ 결과를 직렬화 (Serialization)
+├─ Client Component는 "참조(Reference)"로 표시
+└─ 출력: RSC Payload (특수한 JSON 유사 포맷)
+
+클라이언트
+├─ RSC Payload 수신
+├─ React가 Payload를 해석
+├─ 기존 DOM과 병합 (Reconciliation)
+└─ Client Component만 Hydration
+```
+
+```json
+1:I["./components/Counter.tsx",["default"],""]
+2:{"id": 1, "title": "RSC Post"}
+0:["$","div",null,{"children":[["$","h1",null,{"children":"Hello"}],["$","$L1",null,{"initialCount":0}]]}]
+```
+
+- I (Client Reference): 어떤 클라이언트 컴포넌트가 필요한지, 파일 경로는 어디인지를 나타냅니다.
+- JSON Data: 서버에서 페칭한 데이터나 클라이언트로 전달할 Props 데이터입니다.
+- Tree Structure: 직렬화된 React 트리입니다. `$L1`과 같은 기호는 이 자리에 1번에서 정의한 클라이언트 컴포넌트를 끼워넣어라 라는 참조 역할을 합니다.
+
+# [Deep Dive] RSC 동작 원리
+
+이제 RSC가 내부적으로 어떻게 동작하는지 한 단계 더 깊게 들어가 보겠습니다.
+
+## 서버 단계 (Rendering -> Serialization)
+
+서버에서 React는 컴포넌트 트리를 실행하면서 직렬화 과정을 거칩니다.
+
+- Server Component 실행 : 서버 전용 환경에서 컴포넌트를 실행합니다. 이 과정에서 DB호출이나 파일 시스템 접근이 수행될 수 있습니다.
+
+  <Callout type="info" title="서버 환경">
+    서버 환경에서는 브라우저 API(document, window 등) 접근이 불가능합니다.
+  </Callout>
+
+- Client Component 건너뛰기 : 트리 중간에 클라이언트 컴포넌트를 만나면 React는 이를 실행하는 대신 **"여기 클라이언트 컴포넌트가 들어갈 자리임"** 라는 정보와 Props만 기록합니다.
+- 직렬화 : 전체 트리를 문자열 형태의 RSC Payload(Flight Protocol 포맷)으로 변환합니다.
+  <Callout type="info" title="직렬화란">
+    데이터 구조나 오브젝트 상태를 나중에 재구성할 수 있는 포맷으로 바꾸는 과정입니다. RSC에서는
+    함수는 직렬화할 수 없지만, Date,Map,Set,Promise등은 특수한 포맷으로 전송이 가능합니다.
+  </Callout>
+
+## Flight Protocol
+
+데이터 구조를 자세히 보면 M,J,H 등이 있는데 이를 Flight Protocol이라고 합니다.
+
+- M(Module) : 클라이언트 컴포넌트의 번들 정보
+- J(Json) : JSON 형태의 UI 모델로 실제 렌더링된 컴포넌트 구조
+- H(Hint) : 외부 리소스 및 메타데이터 힌트
+- E(Error) : 에러 정보로 Error Boundary를 트리거하는데 사용
+- S(Symbol) : React 내부 심볼
+- I(Import) : Module과 유사하게 Client Reference를 나타냄
+- P(Promise/Postpone) : Promise 또는 렌더링이 연기되었을 때 사용
+- B(Blob) : blob을 전송할 때 사용
+- T(Text) : 단순 텍스트 노드 표현
+
+## 클라이언트 단계: Reconciliation
+
+브라우저가 RSC Payload를 받으면 아래와 같은 일을 합니다.
+
+- Payload 해석 : 텍스트 형태의 데이터를 다시 React 엘리먼트 트리로 바꿉니다.
+- 참조 확인 : `$L1`같은 참조를 발견하면 해당 클라이언트 컴포넌트의 JS 번들을 로드합니다.
+- 병합 : 기존의 DOM 트리를 파괴하지 않고 새로운 서버 컴포넌트 결과를 기존 트리에 병합합니다.
+
+## Streaming과 Suspense의 관계
+
+RSC는 Streaming처럼 점진적 렌더링을 할 수 있습니다.
+
+```tsx
+// 서버에서 실행
+async function Page() {
+  return (
+    <main>
+      <h1>블로그 포스트</h1>
+      <Suspense fallback={<Skeleton />}>
+        {/* 데이터 페칭이 끝나면 이 부분의 RSC Payload만 나중에 전송됨 */}
+        <VerySlowComponent />
+      </Suspense>
+    </main>
+  );
+}
+```
+
+- 서버는 먼저 h1과 fallback이 포함된 결과물을 보냅니다.
+- VerySlowComponent가 완료되면 서버는 추가적인 RSC Payload 조각을 네트워크 스트림에 전송합니다.
+- 브라우저는 나중에 도착한 조각을 보고 스켈레톤을 실제 컴포넌트로 교체합니다.
+
+## Refetching 메커니즘
+
+사용자가 페이지를 이동하거나 특정 액션으로 서버 데이터를 갱신해야 할 때 브라우저는 서버에 새로운 RSC Payload를 요청합니다.
+
+- 브라우저에서 특정 페이지의 RSC 조각을 다시 달라는 요청을 보냅니다.
+- 서버는 다시 계산해서 최신 Payload를 전송합니다.
+- 클라이언트는 현재 상태를 유지하며 결과만 교체하게 됩니다.
+
+전통적인 방식처럼 `reload`를 하지 않고도 SPA처럼 부드럽게 서버 데이터를 최신화할 수 있는 방법입니다.
+
+# RSC의 장단점
+
+## 장점
+
+가장 큰 장점은 역시 번들 사이즈 감소입니다.
+
+- 클라이언트측에서는 큰 용량의 라이브러리가 포함된 번들을 다운로드 받지 않아도 되기 때문입니다.
+- 또한 클라이언트측에서 렌더링할 필요가 없는 정적인 페이지들 역시 다운로드하지 않기 때문입니다.
+
+다음으로는 보안 강화입니다. Next.js로 백엔드 구축까지 해본 적은 없지만
+
+- DB직접 쿼리, 비즈니스 로직 등 민감한 정보를 노출시키지 않기 때문입니다.
+
+마지막으로 데이터 페칭의 간소화입니다.
+
+- `useEffect`, `fetch` 등 데이터 페칭 로직을 덜어낼 수 있습니다.
+- 서버 컴포넌트 내에서 `async/await`로 직접 데이터를 가져오면 끝이기 때문입니다.
+- 이 방식으로 Waterfall 문제를 서버 단계에서 관리할 수 있게 해줍니다.
+
+## 단점
+
+제가 생각하는 가장 큰 단점은 클라이언트 컴포넌트와 서버 컴포넌트의 경계를 나누는 것입니다.
+
+- 서버에서 클라이언트로 데이터를 넘길 때 직렬화 제약이 생각보다 까다롭기 때문입니다(함수,클래스 인스턴스를 Props로 넘길 수 없음)
+
+  <Callout type="info" title="함수 직렬화가 불가능한 이유">
+    함수에는 코드가 참조하는 외부 변수들의 상태, 즉 **컨텍스트** 가 포함되어 있습니다. 서버의 메모리
+    주소와 상태를 담고 있는 이 컨텍스트는 텍스트 형태로 변환(직렬화)될 수 없으므로, 네트워크를 통해
+    클라이언트로 전송하는 것이 구조적으로 불가능합니다.
+  </Callout>
+
+다음으로 라이브러리 호환성입니다.
+
+- Context API를 사용하는 라이브러리들은 RSC 환경에서 바로 동작하지 않습니다.
+- 사용하려면 클라이언트 컴포넌트로 래핑하거나, 별도의 설정을 해줘야 하는 번거로움이 있습니다.
+- 특히 `emotion`,`styled-component`같은 런타임 CSS 라이브러리는 RSC에서 사용할 수 없습니다.
+
+마지막으로 보안입니다. 장점에서 보안을 언급했지만 비교적 최근 React CVE-2025-55182 에서 일어난 이슈들입니다.<br/>
+빠르게 해결이 되었고 버전 업그레이드가 이뤄졌지만 이로 인해 서버 컴포넌트에 대한 불신이 늘어난 것 같습니다.
+
+- 취약한 React Server Component를 사용하는 서버는 공격자가 인증 없이 원격으로 명령어를 실행할 수 있습니다<br/>
+  자세한 내용은[React CVE 간단 분석](https://malwareanalysis.tistory.com/884)을 확인해주세요.
+
+# 마무리
+
+저는 처음에는 서버 컴포넌트의 혁신적인 방식이 놀라웠습니다. <br/>
+모든 것을 클라이언트가 받을 필요가 없다는 발상에서 시작하여 꾸준히 발전중인 방식입니다.<br/>
+하지만 여전히 많은 제약이 따르고, 그만큼 많은 이슈가 발생하고 있기 때문에 적극적으로 도입하기 꺼려하는 느낌을 받았습니다.<br/>
+제가 학부생때 제일 재밌게 들었던 과목의 교수님께서 이런 말을 했습니다.
+
+> 기술에는 Trade-off가 따른다. 엔지니어는 그 Trade-off에서 가장 최선을 선택하는 것이다
+
+이 말이 지금의 RSC에도 똑같이 적용되는 느낌이 들었습니다.<br/>
