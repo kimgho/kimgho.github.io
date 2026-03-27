@@ -90,7 +90,7 @@ Suspense라는 이름이 세상에 처음 등장한 것은 2018년, **React 16.6
 
 Suspense의 사용법은 굉장히 간단합니다. 비동기 데이터를 읽어오는 로직과 예외 처리는 컴포넌트 외부나 부모에게 위임하고, 화면을 그리는 컴포넌트는 오직 '데이터가 성공적으로 불러와졌을 때'의 UI 렌더링에만 집중하면 됩니다.
 
-앞서 `isLoading`과 `isError` 조건문으로 뒤덮여 있던 코드가 Suspense와 Error Boundary를 만나면 다음과 같이 짧아집니다.
+앞서 `isLoading`과 `isError` 조건문으로 뒤덮여 있던 코드가 Suspense와 ErrorBoundary를 만나면 다음과 같이 짧아집니다.
 
 ```jsx
 import { Suspense } from "react";
