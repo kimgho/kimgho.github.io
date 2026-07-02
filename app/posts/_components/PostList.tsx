@@ -8,7 +8,7 @@ import { GAPostEvents } from "@/app/utils/analytics";
 import { PostData } from "@/app/utils/posts";
 
 import { PostCard } from "@/app/(main)/_components/PostCard";
-import { PostFilter, LatestPost } from "@/app/posts/_components";
+import { PostFilter } from "@/app/posts/_components";
 
 interface Props {
   posts: PostData[];
@@ -55,10 +55,8 @@ export const PostList = ({ posts, categories }: Props) => {
     return counts;
   }, [posts]);
 
-  const [featuredPost, ...remainingPosts] = filteredPosts;
-
   return (
-    <div className="flex flex-col md:flex-row gap-12 items-start w-full">
+    <div className="flex w-full flex-col gap-8">
       <PostFilter
         search={search}
         onSearchChange={setSearch}
@@ -68,7 +66,7 @@ export const PostList = ({ posts, categories }: Props) => {
         categoryCounts={categoryCounts}
       />
 
-      <div className="flex-1 min-w-0 w-full">
+      <div className="min-w-0 w-full">
         {filteredPosts.length === 0 ? (
           <div
             role="status"
@@ -78,11 +76,9 @@ export const PostList = ({ posts, categories }: Props) => {
             검색 결과가 없습니다.
           </div>
         ) : (
-          <section className="flex flex-col gap-10" aria-label="게시글 목록">
-            <LatestPost post={featuredPost} />
-
-            <div className="grid grid-cols-1 gap-6">
-              {remainingPosts.map((post) => (
+          <section aria-label="게시글 목록">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {filteredPosts.map((post) => (
                 <PostCard key={post.slug} post={post} />
               ))}
             </div>

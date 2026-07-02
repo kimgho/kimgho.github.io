@@ -5,13 +5,8 @@ export const NAV_LINKS = [
     title: "블로그 메인페이지",
   },
   {
-    name: "introduction",
+    name: "About",
     href: "/introduction",
     title: "자기소개",
-  },
-  {
-    name: "posts",
-    href: "/posts",
-    title: "블로그 포스트",
   },
 ];
