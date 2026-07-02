@@ -2,11 +2,11 @@ export const ACTIVITIES = [
   {
     title: "GDGoC KNU 4th,5th",
     role: "Frontend Core",
-    period: "2024.09 - Present",
+    period: "2024.09 - 2026.02",
     descriptions: [
       "2024년 9월, 4기 일반 멤버로 들어와서 꾸준하고 적극적인 활동을 통해 2025년 1월 프론트엔드 운영진이 되었습니다.",
-      "GDGoC KNU의 프론트엔드 멤버들이 즐겁게 배울 수 있는 스터디를 운영하고 있습니다.",
-      "2025년 5월, GDGoC KNU에서 개최한 DevFest 행사를 기획하고, 운영을 했습니다.",
+      "GDGoC KNU의 프론트엔드 멤버들이 즐겁게 배울 수 있는 스터디를 운영했습니다.",
+      "2025년 5월, GDGoC KNU에서 개최한 DevFest 행사를 기획하고, 운영했습니다.",
     ],
   },
   {
